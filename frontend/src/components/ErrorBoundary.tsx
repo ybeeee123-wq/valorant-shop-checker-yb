@@ -28,13 +28,9 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex min-h-svh items-center justify-center bg-bg-primary px-4">
           <div className="max-w-md text-center">
-            <h1
-              className="mb-2 text-3xl tracking-wider text-accent-red"
-              style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}
-            >
-              SOMETHING WENT WRONG
-            </h1>
-            <p className="mb-6 text-sm text-text-secondary">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-accent-red">Unexpected error</p>
+            <h1 className="mb-3 text-3xl font-medium tracking-[-0.04em] text-text-primary">Something went wrong</h1>
+            <p className="mb-7 text-sm leading-6 text-text-muted">
               {this.state.error?.message || 'An unexpected error occurred.'}
             </p>
             <button
@@ -42,10 +38,9 @@ export default class ErrorBoundary extends Component<Props, State> {
                 this.setState({ hasError: false, error: null });
                 window.location.href = '/';
               }}
-              className="rounded bg-accent-red px-6 py-2.5 text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110"
-              style={{ fontFamily: "'Oswald', sans-serif" }}
+              className="primary-button"
             >
-              BACK TO LOGIN
+              Back to login
             </button>
           </div>
         </div>

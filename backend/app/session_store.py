@@ -46,6 +46,11 @@ class SessionStore:
             if token in self._sessions:
                 self._sessions[token] = data
 
+    def find_active_by_puuid(self, puuid: str) -> SessionData | None:
+        now = datetime.now(timezone.utc)
+        with self._lock:
+            return next((session for session in self._sessions.values() if session.puuid == puuid and now < session.expires_at), None)
+
     def delete(self, token: str) -> None:
         with self._lock:
             self._sessions.pop(token, None)

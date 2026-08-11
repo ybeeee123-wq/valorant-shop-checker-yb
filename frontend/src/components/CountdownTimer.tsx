@@ -1,57 +1,33 @@
 import { useEffect, useState } from 'react';
+import { ClockIcon } from './Icons';
 
 interface CountdownTimerProps {
   secondsRemaining: number;
   onExpire?: () => void;
+  label?: string;
 }
 
-export default function CountdownTimer({ secondsRemaining, onExpire }: CountdownTimerProps) {
+export default function CountdownTimer({ secondsRemaining, onExpire, label = 'Next rotation' }: CountdownTimerProps) {
   const [remaining, setRemaining] = useState(secondsRemaining);
-  const [prevSecs, setPrevSecs] = useState(secondsRemaining);
-
-  if (secondsRemaining !== prevSecs) {
-    setPrevSecs(secondsRemaining);
-    setRemaining(secondsRemaining);
-  }
-
-  const isExpired = remaining <= 0;
 
   useEffect(() => {
-    if (isExpired) {
+    if (remaining <= 0) {
       onExpire?.();
       return;
     }
-
-    const interval = setInterval(() => {
-      setRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          onExpire?.();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isExpired, onExpire]);
+    const timeout = window.setTimeout(() => setRemaining((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearTimeout(timeout);
+  }, [remaining, onExpire]);
 
   const hours = Math.floor(remaining / 3600);
   const minutes = Math.floor((remaining % 3600) / 60);
   const seconds = remaining % 60;
 
   return (
-    <div className="flex items-center gap-2 text-accent-teal">
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-      </svg>
-      <span className="text-lg font-semibold tracking-wide">
-        Store refreshes in{' '}
-        <span className="font-bold">
-          {hours}h {minutes.toString().padStart(2, '0')}m {seconds.toString().padStart(2, '0')}s
-        </span>
-      </span>
+    <div className="reset-timer" aria-label={`${label}: ${hours} hours, ${minutes} minutes, and ${seconds} seconds`}>
+      <ClockIcon className="h-[17px] w-[17px]" />
+      <span>{label}</span>
+      <strong>{hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}</strong>
     </div>
   );
 }

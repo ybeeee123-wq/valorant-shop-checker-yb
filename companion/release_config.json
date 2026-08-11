@@ -1,0 +1,6 @@
+{
+    "api_base_url":  "https://valorant-shop-checker-yb-production.up.railway.app",
+    "public_site_url":  "https://ybvalshop.netlify.app",
+    "update_metadata_url":  "",
+    "update_download_url":  ""
+}

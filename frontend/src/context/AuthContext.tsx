@@ -59,19 +59,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
-    // Only check session if we have a stored token
-    if (!api.getStoredToken()) return;
+  const params = new URLSearchParams(window.location.search);
+  const callbackToken = params.get('session_token');
 
-    api.checkSession().then((res) => {
+  if (callbackToken) {
+    api.storeToken(callbackToken);
+
+    // Remove the token from the visible URL
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+
+  const token = callbackToken ?? api.getStoredToken();
+
+  if (!token) return;
+
+  api.checkSession()
+    .then((res) => {
       if (res.valid && res.puuid) {
-        dispatch({ type: 'SESSION_RESTORED', puuid: res.puuid });
+        dispatch({
+          type: 'SESSION_RESTORED',
+          puuid: res.puuid,
+        });
       } else {
         api.clearToken();
       }
-    }).catch(() => {
+    })
+    .catch(() => {
       api.clearToken();
     });
-  }, []);
+}, []);
 
   return (
     <AuthContext.Provider value={{ state, dispatch }}>

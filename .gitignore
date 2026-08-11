@@ -19,6 +19,20 @@ env/
 htmlcov/
 .coverage
 coverage.xml
+*.db
+*.pem
+*.pfx
+*.p12
+*.key
+*.crt
+.valshop-companion/
+release/
+.install-test/
+companion/build_version_info.txt
+build_version_info.txt
+companion/release_config.local.json
+*.log
+settings.json
 
 # Node
 node_modules/
@@ -33,6 +47,7 @@ dist/
 .nuxt/
 .output/
 .vercel/
+.netlify/
 
 # IDE
 .vscode/

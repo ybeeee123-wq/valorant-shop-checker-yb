@@ -3,9 +3,11 @@ import logging
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from app.database import SessionLocal
 from app.models.auth import SessionData
-from app.models.store import BundleResponse, DailyStoreResponse, Wallet
+from app.models.store import BundleResponse, DailyStoreResponse, NightMarketResponse, Wallet
 from app.services import storefront
+from app.services.cloud import get_or_create_user, record_snapshot, sync_from_daily
 from app.session_store import store
 
 logger = logging.getLogger(__name__)
@@ -55,7 +57,16 @@ async def daily_store(session: SessionData = Depends(get_session)) -> DailyStore
         )
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
         raise _handle_riot_error(exc)
-    return storefront.get_daily_store(raw)
+    result = storefront.get_daily_store(raw)
+    db = SessionLocal()
+    try:
+        user = get_or_create_user(db, session.puuid)
+        record_snapshot(db, user.id, sync_from_daily(result.offers, result.seconds_remaining))
+    except Exception:
+        logger.exception("Could not persist daily shop snapshot")
+    finally:
+        db.close()
+    return result
 
 
 @router.get("/bundle", response_model=BundleResponse)
@@ -77,3 +88,14 @@ async def wallet(session: SessionData = Depends(get_session)) -> Wallet:
         )
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
         raise _handle_riot_error(exc)
+
+
+@router.get("/night-market", response_model=NightMarketResponse)
+async def night_market(session: SessionData = Depends(get_session)) -> NightMarketResponse:
+    try:
+        raw = await storefront.fetch_storefront(
+            session.access_token, session.entitlements_token, session.puuid, session.shard
+        )
+    except (httpx.HTTPStatusError, httpx.RequestError) as exc:
+        raise _handle_riot_error(exc)
+    return storefront.get_night_market(raw)

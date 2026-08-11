@@ -2,18 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Check your Valorant daily store, featured bundles, and night market from any device — without launching the game." />
-    <meta property="og:title" content="Valorant Shop Checker" />
-    <meta property="og:description" content="Check your Valorant daily store, featured bundles, and night market from any device." />
+    <meta name="description" content="Check your daily VALORANT store without opening the game." />
+    <meta property="og:title" content="VALSHOP — Your personal VALORANT storefront" />
+    <meta property="og:description" content="Check your daily VALORANT store without opening the game." />
     <meta property="og:type" content="website" />
-    <!-- TODO: add og-image.png to public/ for social media previews -->
-    <meta name="theme-color" content="#0F1923" />
+    <meta name="theme-color" content="#f4f4f0" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-v3.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-v3.png" />
+    <script>
+      try {
+        const theme = localStorage.getItem('valshop-theme') === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'dark' ? '#111311' : '#f4f4f0');
+      } catch {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
-    <title>Valorant Shop Checker</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <title>VALSHOP — Daily Store Checker</title>
   </head>
   <body>
     <div id="root"></div>

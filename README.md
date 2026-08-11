@@ -1,139 +1,58 @@
-# Valorant Shop Checker
+# VALSHOP
 
-Check your Valorant daily store from any device — without launching the game.
+VALSHOP is a personal VALORANT shop tracker with a polished website and an installable Windows companion. It shows the Daily Shop, bundles, wallet, Night Market, wishlist, and history, then checks again after the next rotation and can send native Windows, Web Push, or Discord notifications.
 
-![React](https://img.shields.io/badge/React_19-61DAFB?logo=react&logoColor=black)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?logo=tailwindcss&logoColor=white)
+VALSHOP is independent and is not affiliated with or endorsed by Riot Games. Riot credentials are entered only on Riot's sign-in page; VALSHOP never stores a Riot password. The product relies on unofficial Riot client APIs, so authentication can occasionally require reconnecting.
 
-A web app that lets Valorant players view their personalized daily shop rotation, featured bundles, and wallet balance from a browser. Built with a Python/FastAPI backend that handles Riot's OAuth authentication, and a React/TypeScript frontend with a Valorant-themed dark UI.
+## Install on Windows
 
-![Daily Store View](docs/valscreenshot.PNG)
+1. Download `VALSHOP-Setup.exe`.
+2. Install and launch VALSHOP.
+3. Complete the graphical onboarding and click **Connect Riot**.
+4. Sign in in the browser. VALSHOP captures the callback automatically.
+5. Add skins to your wishlist and close the window; VALSHOP continues in the tray.
 
-> **Disclaimer:** This application is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
-
-## What It Does
-
-- **Daily Store** — View your 4 daily rotating skin offers with content-tier indicators and VP prices
-- **Featured Bundles** — See current bundles with item breakdowns and discount pricing
-- **Wallet Balance** — Check your VP and Radianite Points
-- **Auto-Refresh** — Countdown timer with automatic store refresh on rotation
-- **Secure Auth** — Riot OAuth implicit-grant flow; your password never touches this app
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS 4, React Router |
-| **Backend** | Python 3.12, FastAPI, httpx, uvicorn, Pydantic |
-| **Auth** | Riot Games OAuth 2.0 implicit grant (`client_id=riot-client`) |
-| **Asset Data** | [valorant-api.com](https://valorant-api.com) — skins, bundles, content tiers |
-| **Deployment** | Vercel (frontend), AWS Lightsail + Docker (backend), GitHub Actions CI/CD |
+No terminal, Python, Node.js, token copying, or configuration files are required for normal users. Unsigned development builds may trigger a Windows SmartScreen warning.
 
 ## Architecture
 
-```
-┌──────────────┐         ┌──────────────────┐        ┌──────────────────┐
-│   Browser    │  HTTPS  │  FastAPI Backend  │  HTTPS │  Riot APIs       │
-│  (React SPA) │◄───────►│  (Docker/Lightsail)│◄──────►│  auth, store,    │
-│              │  JSON   │                  │        │  entitlements    │
-└──────┬───────┘         └──────────────────┘        └──────────────────┘
-       │                         │
-       │  OAuth login            │  Startup
-       ▼                         ▼
-┌──────────────┐         ┌──────────────────┐
-│  Riot Login  │         │ valorant-api.com │
-│  (browser)   │         │ (asset cache)    │
-└──────────────┘         └──────────────────┘
-```
+- `companion/`: PySide6 Windows app. It talks directly to Riot, keeps Riot and device credentials in Windows Credential Manager, and stores only non-sensitive cache/preferences under `%LOCALAPPDATA%\VALSHOP`.
+- `backend/`: FastAPI cloud service for identity, pairing, normalized snapshots, wishlist/history, devices, and notification dedupe. Production uses Postgres; SQLite remains available for development.
+- `frontend/`: React/Vite website, including `/connect-companion` approval.
+- `installer/`: per-user Inno Setup installer.
 
-**Auth flow:** The user clicks "Sign In with Riot," which opens Riot's official login page. After authenticating, Riot redirects to `http://localhost/redirect#access_token=...` — since the app is deployed remotely, this shows a "can't connect" page, which is expected. The user copies the full URL from the address bar and pastes it into the app. The backend extracts the access token from the URL fragment and uses it to fetch entitlements, player info, and region data from Riot's APIs. A server-side session token is returned to the frontend and stored in `localStorage` for subsequent API calls.
+Details: [architecture](docs/ARCHITECTURE.md), [security](docs/SECURITY.md), [releasing](docs/RELEASING.md), and [deployment](DEPLOYMENT.md).
 
-## Design Decisions & Tradeoffs
+## Development
 
-| Decision | Why |
-|---|---|
-| **Paste-URL auth flow** | Riot's OAuth with `client_id=riot-client` enforces `redirect_uri=http://localhost/redirect` — no custom redirect URIs are allowed. Server-side credential auth was attempted but Riot blocks it with Cloudflare/captcha challenges. The paste-URL flow is the only reliable approach for a deployed web app. |
-| **localStorage + Bearer tokens** (not cookies) | Cross-origin cookies are blocked by mobile Safari and other browsers with strict third-party cookie policies. `localStorage` with `Authorization: Bearer` headers works reliably across all platforms. |
-| **sessionStorage for login stage** | Mobile browsers kill the JS context when the user switches tabs to complete Riot login. `sessionStorage` persists the UI state so the paste form survives tab switches. |
-| **In-memory session store** | Simplicity over durability — sessions are short-lived (3h access token TTL) and the app targets a small user base. No database dependency needed. |
-| **Asset cache at startup** | All skin/bundle/tier data is loaded from valorant-api.com into O(1) lookup dicts on startup, avoiding per-request API calls and keeping response times fast. |
-| **Docker `--no-cache` in CI** | Docker's `COPY` layer caching caused stale deployments where code changes weren't reflected. `--no-cache` ensures every deploy uses fresh code. |
+Requirements: Python 3.12+, Node.js 18+, and Windows for the companion UI.
 
-## Local Development
+Run all local services on Windows:
 
-### Prerequisites
-
-- Python 3.12+
-- Node.js 18+
-
-### Backend
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate    # Linux/macOS
-# .venv\Scripts\activate     # Windows
-
-pip install -e .
-cp .env.example .env         # then fill in ENCRYPTION_KEY
-uvicorn app.main:app --reload
+```bat
+scripts\run_dev.bat
 ```
 
-The API runs at `http://localhost:8000`.
+Or run each layer independently:
 
-### Frontend
+```powershell
+py -3.12 -m venv backend\.venv
+backend\.venv\Scripts\python -m pip install -e "backend[dev]" -e "companion[dev]"
+backend\.venv\Scripts\python -m uvicorn app.main:app --app-dir backend --reload
 
-```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-The dev server runs at `http://localhost:5173` and proxies `/api` requests to the backend.
+Build and validate a Windows release:
 
-## Deployment
-
-| Component | Platform | Trigger |
-|---|---|---|
-| **Frontend** | Vercel (git integration) | Push to `master` |
-| **Backend** | AWS Lightsail (Docker) | Push to `master` when `backend/` changes (via GitHub Actions) |
-
-### Backend deployment
-
-The GitHub Actions workflow (`.github/workflows/deploy-backend.yml`) SSHs into the Lightsail instance, pulls the latest code, and rebuilds the Docker container. Required GitHub secrets:
-
-- `LIGHTSAIL_HOST` — Instance IP address
-- `LIGHTSAIL_SSH_KEY` — SSH private key for the `ubuntu` user
-
-### Environment variables
-
-See [`backend/README.md`](backend/README.md) and [`frontend/README.md`](frontend/README.md) for details.
-
-## Project Structure
-
+```bat
+scripts\build_windows.bat
 ```
-valorant-shop-checker/
-├── backend/
-│   ├── app/
-│   │   ├── routers/       # API route handlers (auth, store)
-│   │   ├── services/      # Riot API integration, asset cache, storefront
-│   │   ├── models/        # Pydantic and dataclass models
-│   │   ├── config.py      # App settings (pydantic-settings)
-│   │   ├── session_store.py  # In-memory session management
-│   │   └── main.py        # FastAPI app entry point
-│   ├── Dockerfile
-│   └── pyproject.toml
-├── frontend/
-│   ├── src/
-│   │   ├── pages/         # LoginPage, ShopPage
-│   │   ├── components/    # SkinCard, BundleCard, CountdownTimer, etc.
-│   │   ├── api/           # API client with token management
-│   │   ├── context/       # Auth state (useReducer)
-│   │   └── types/         # TypeScript interfaces
-│   ├── vite.config.ts
-│   └── package.json
-├── .github/workflows/     # CI/CD for backend deployment
-└── README.md
-```
+
+The script runs backend/companion tests, static checks, frontend lint/build, PyInstaller, a packaged executable smoke test, optional Authenticode signing, and Inno Setup when installed.
+
+## Production configuration
+
+Backend variables are documented in `backend/.env.example`; the frontend uses `VITE_API_URL`. Desktop release endpoints are embedded at build time with `VALSHOP_API_BASE_URL`, `VALSHOP_PUBLIC_SITE_URL`, `VALSHOP_UPDATE_METADATA_URL`, and `VALSHOP_UPDATE_DOWNLOAD_URL`. See [releasing](docs/RELEASING.md) for exact steps.

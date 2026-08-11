@@ -2,28 +2,25 @@ import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
+import { ChevronRightIcon, ShieldIcon } from '../components/Icons';
+import ThemeToggle from '../components/ThemeToggle';
+import Brand from '../components/Brand';
 
 type Stage = 'start' | 'paste';
 
 export default function LoginPage() {
   const { state, dispatch } = useAuth();
   const navigate = useNavigate();
-
-  const [stage, setStage] = useState<Stage>(
-    () => (sessionStorage.getItem('login_stage') === 'paste' ? 'paste' : 'start')
-  );
+  const [stage, setStage] = useState<Stage>(() => (sessionStorage.getItem('login_stage') === 'paste' ? 'paste' : 'start'));
   const [pastedUrl, setPastedUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (state.status === 'authenticated') {
-    return <Navigate to="/shop" replace />;
-  }
+  if (state.status === 'authenticated') return <Navigate to={sessionStorage.getItem('post_login_path') ?? '/shop'} replace />;
 
   async function handleOpenLogin() {
     setLoading(true);
     setError(null);
-
     try {
       const { auth_url } = await api.getAuthUrl();
       window.open(auth_url, '_blank', 'noopener');
@@ -36,21 +33,20 @@ export default function LoginPage() {
     }
   }
 
-  async function handleSubmitUrl(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmitUrl(event: React.FormEvent) {
+    event.preventDefault();
     if (!pastedUrl.trim()) return;
-
     setLoading(true);
     setError(null);
-
     try {
       const res = await api.submitToken(pastedUrl.trim());
-
       if (res.status === 'success' && res.puuid && res.session_token) {
         sessionStorage.removeItem('login_stage');
         api.storeToken(res.session_token);
         dispatch({ type: 'LOGIN_SUCCESS', puuid: res.puuid });
-        navigate('/shop');
+        const destination = sessionStorage.getItem('post_login_path') ?? '/shop';
+        sessionStorage.removeItem('post_login_path');
+        navigate(destination);
       } else {
         setError(res.error ?? 'Authentication failed');
         setLoading(false);
@@ -69,118 +65,75 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-bg-primary px-4">
-      {/* Angular geometric background accents */}
-      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <div className="absolute -left-20 top-1/4 h-px w-80 rotate-[35deg] bg-gradient-to-r from-transparent via-accent-red/20 to-transparent" />
-        <div className="absolute -right-10 top-1/3 h-px w-96 -rotate-[25deg] bg-gradient-to-r from-transparent via-accent-red/15 to-transparent" />
-        <div className="absolute bottom-1/4 left-1/4 h-px w-64 rotate-[55deg] bg-gradient-to-r from-transparent via-accent-teal/10 to-transparent" />
-        <div className="absolute -right-16 bottom-1/3 h-px w-72 rotate-[40deg] bg-gradient-to-r from-transparent via-accent-red/10 to-transparent" />
-        <div className="absolute left-1/3 top-16 h-px w-48 -rotate-[15deg] bg-gradient-to-r from-transparent via-border to-transparent" />
-        <div className="absolute bottom-20 right-1/4 h-px w-56 rotate-[65deg] bg-gradient-to-r from-transparent via-border to-transparent" />
-      </div>
+    <div className="login-page">
+      <header className="login-header">
+        <Brand />
+        <div className="login-header-actions"><span className="login-header-note"><i />Independent companion</span><ThemeToggle /></div>
+      </header>
 
-      <div className="relative w-full max-w-md">
-        <div className="rounded-lg border border-border bg-bg-secondary p-8 shadow-2xl">
-          <h1
-            className="mb-1 text-center text-4xl tracking-wider text-text-primary"
-            style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}
-          >
-            VALORANT <span className="text-accent-red">SHOP</span>
-          </h1>
-          <p className="mb-8 text-center text-sm text-text-secondary">
-            Check your daily store without launching the game
-          </p>
+      <main className="login-main">
+        <section className="login-panel">
+          <p className="login-eyebrow">Your daily store, simplified.</p>
+          <h1>Check your shop.<br />Skip the launch.</h1>
+          <p className="login-intro">Your daily VALORANT offers, featured collections, and balances in one quiet place.</p>
 
           {stage === 'start' ? (
-            <>
-              <button
-                onClick={handleOpenLogin}
-                disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded bg-accent-red py-3 text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-                style={{ fontFamily: "'Oswald', sans-serif" }}
-              >
-                {loading && <Spinner />}
-                SIGN IN WITH RIOT
+            <div className="login-action-block">
+              <button type="button" onClick={handleOpenLogin} disabled={loading} className="primary-button login-button">
+                {loading ? <Spinner /> : <span className="button-dot" />}
+                <span>Sign in with Riot</span>
+                {!loading && <ChevronRightIcon className="h-4 w-4" />}
               </button>
-
-              <p className="mt-4 text-center text-xs leading-relaxed text-text-secondary/70">
-                A new tab will open for Riot login. After signing in, you'll see
-                a <span className="text-accent-red">"can't connect"</span> page —
-                that's normal. Copy the URL and come back here to paste it.
-              </p>
-
-              {error && (
-                <p className="mt-4 text-center text-sm text-accent-red">{error}</p>
-              )}
-            </>
-          ) : (
-            <div className="animate-slide-in space-y-4">
-              <div className="rounded border border-border bg-bg-primary p-4 text-sm text-text-secondary">
-                <p className="mb-3 font-medium text-text-primary">After logging in on Riot's page:</p>
-                <ol className="list-inside list-decimal space-y-1.5 text-xs leading-relaxed">
-                  <li>You'll see a <span className="text-accent-red">"can't connect"</span> error page — this is expected</li>
-                  <li>Copy the <span className="text-text-primary">entire URL</span> from the address bar</li>
-                  <li>Come back to <span className="text-text-primary">this tab</span> and paste it below</li>
-                </ol>
+              <div className="security-note">
+                <ShieldIcon className="h-[18px] w-[18px]" />
+                <p><strong>Private by design.</strong> Authentication happens on Riot’s official page. VALSHOP never sees your password.</p>
               </div>
-
-              <form onSubmit={handleSubmitUrl} className="space-y-3">
-                <textarea
-                  value={pastedUrl}
-                  onChange={(e) => setPastedUrl(e.target.value)}
-                  placeholder="Paste the URL here (starts with http://localhost/redirect#...)"
-                  rows={3}
-                  className="w-full resize-none rounded border border-border bg-bg-primary px-3 py-2.5 text-xs text-text-primary placeholder-text-secondary/50 outline-none transition-colors focus:border-accent-red"
-                />
-                <button
-                  type="submit"
-                  disabled={loading || !pastedUrl.trim()}
-                  className="flex w-full items-center justify-center gap-2 rounded bg-accent-red py-3 text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-                  style={{ fontFamily: "'Oswald', sans-serif" }}
-                >
-                  {loading && <Spinner />}
-                  COMPLETE LOGIN
+              {error && <p role="alert" className="login-error">{error}</p>}
+            </div>
+          ) : (
+            <div className="login-action-block stage-enter">
+              <div className="fallback-intro">
+                <span>Fallback sign-in</span>
+                <p>After signing in with Riot, the callback usually returns automatically. If it didn’t, paste the full localhost URL below.</p>
+              </div>
+              <form onSubmit={handleSubmitUrl} className="callback-form">
+                <label htmlFor="riot-callback-url">Riot callback URL</label>
+                <textarea id="riot-callback-url" value={pastedUrl} onChange={(event) => setPastedUrl(event.target.value)} placeholder="http://localhost/redirect#..." rows={3} className="login-input" />
+                <button type="submit" disabled={loading || !pastedUrl.trim()} className="primary-button login-button">
+                  {loading && <Spinner />}Complete sign in<ChevronRightIcon className="h-4 w-4" />
                 </button>
               </form>
-
-              {error && (
-                <p className="text-center text-sm text-accent-red">{error}</p>
-              )}
-
-              <button
-                type="button"
-                onClick={handleBack}
-                className="mx-auto block text-xs uppercase tracking-widest text-text-secondary transition-colors hover:text-text-primary"
-                style={{ fontFamily: "'Oswald', sans-serif" }}
-              >
-                Start over
-              </button>
+              {error && <p role="alert" className="login-error">{error}</p>}
+              <button type="button" onClick={handleBack} className="text-button">Start over</button>
             </div>
           )}
-        </div>
+        </section>
 
-        <p className="mt-6 text-center text-xs leading-relaxed text-text-secondary/70">
-          You'll log in on Riot's official page — this app never sees your password.
-          <br />
-          Only a temporary access token is used to fetch your store.
-        </p>
-        <p className="mt-4 text-center text-[10px] leading-relaxed text-text-secondary/50">
-          This application is not endorsed by Riot Games and does not reflect the
-          views or opinions of Riot Games or anyone officially involved in producing
-          or managing Riot Games properties. Riot Games and all associated properties
-          are trademarks or registered trademarks of Riot Games, Inc.
-        </p>
-      </div>
+        <aside className="login-preview" aria-label="VALSHOP features">
+          <div className="preview-topline"><span>Today’s overview</span><span>Live</span></div>
+          <div className="preview-stat"><strong>04</strong><span>Personal<br />offers</span></div>
+          <div className="preview-rule" />
+          <ul>
+            <li><span>Daily shop</span><i>Ready</i></li>
+            <li><span>Featured bundles</span><i>Live</i></li>
+            <li><span>Wallet balances</span><i>Synced</i></li>
+          </ul>
+          <p>Everything you need to check.<br />Nothing you don’t.</p>
+        </aside>
+      </main>
+
+      <footer className="login-footer">
+        <span>Made by yb</span>
+      </footer>
     </div>
   );
 }
 
 function Spinner() {
   return (
-    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.4 0 0 5.4 0 12h4Z" />
     </svg>
   );
 }

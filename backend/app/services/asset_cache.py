@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 import httpx
 
@@ -13,10 +14,10 @@ CLIENT_PLATFORM = (
 )
 
 # Module-level caches
-_skins: dict[str, dict] = {}
-_skin_levels_to_skin: dict[str, dict] = {}
-_content_tiers: dict[str, dict] = {}
-_bundles: dict[str, dict] = {}
+_skins: dict[str, dict[str, Any]] = {}
+_skin_levels_to_skin: dict[str, dict[str, Any]] = {}
+_content_tiers: dict[str, dict[str, Any]] = {}
+_bundles: dict[str, dict[str, Any]] = {}
 _client_version: str = ""
 
 
@@ -36,6 +37,7 @@ async def initialize() -> None:
             "displayIcon": skin.get("displayIcon") or skin.get("chromas", [{}])[0].get("fullRender", ""),
             "contentTierUuid": (skin.get("contentTierUuid") or "").lower(),
             "levels": skin.get("levels", []),
+            "weapon": skin.get("displayName", "").rsplit(" ", 1)[-1],
         }
         _skins[uuid] = skin_entry
 
@@ -76,7 +78,9 @@ async def initialize() -> None:
     )
 
 
-async def _fetch_all(client: httpx.AsyncClient) -> tuple[list, list, dict, list]:
+async def _fetch_all(client: httpx.AsyncClient) -> tuple[
+    list[dict[str, Any]], list[dict[str, Any]], dict[str, Any], list[dict[str, Any]]
+]:
     """Fetch all endpoints concurrently."""
     skins_req = client.get(f"{BASE_URL}/weapons/skins")
     tiers_req = client.get(f"{BASE_URL}/contenttiers")
@@ -103,13 +107,13 @@ async def _fetch_all(client: httpx.AsyncClient) -> tuple[list, list, dict, list]
     )
 
 
-def get_skin(uuid: str) -> dict | None:
+def get_skin(uuid: str) -> dict[str, Any] | None:
     """Lookup skin by skin UUID or skin level UUID."""
     key = uuid.lower()
     return _skins.get(key) or _skin_levels_to_skin.get(key)
 
 
-def get_content_tier(uuid: str) -> dict | None:
+def get_content_tier(uuid: str) -> dict[str, Any] | None:
     return _content_tiers.get(uuid.lower())
 
 
@@ -117,5 +121,31 @@ def get_client_version() -> str:
     return _client_version
 
 
-def get_bundle_info(uuid: str) -> dict | None:
+def get_bundle_info(uuid: str) -> dict[str, Any] | None:
     return _bundles.get(uuid.lower())
+
+
+def search_skins(query: str = "", weapon: str = "", limit: int = 100) -> list[dict[str, Any]]:
+    """Return searchable skin metadata without exposing cache internals."""
+    query_key = query.strip().lower()
+    weapon_key = weapon.strip().lower()
+    results: list[dict[str, Any]] = []
+    for skin in _skins.values():
+        name = skin.get("displayName", "")
+        tier_uuid = skin.get("contentTierUuid", "")
+        if not tier_uuid or (query_key and query_key not in name.lower()):
+            continue
+        if weapon_key and skin.get("weapon", "").lower() != weapon_key:
+            continue
+        tier = get_content_tier(tier_uuid)
+        results.append({
+            "uuid": skin["uuid"],
+            "name": name,
+            "display_icon": skin.get("displayIcon", ""),
+            "weapon": skin.get("weapon", ""),
+            "content_tier_uuid": tier_uuid,
+            "content_tier_name": tier["name"] if tier else "Unknown",
+            "content_tier_color": tier["highlight_color"] if tier else "",
+        })
+    results.sort(key=lambda item: item["name"])
+    return results[:limit]

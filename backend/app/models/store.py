@@ -42,3 +42,24 @@ class DailyStoreResponse(BaseModel):
 
 class BundleResponse(BaseModel):
     bundles: list[Bundle]
+
+
+class NightMarketOffer(BaseModel):
+    bonus_offer_id: str
+    offer_id: str
+    uuid: str
+    name: str
+    display_icon: str
+    content_tier_uuid: str
+    content_tier_name: str
+    content_tier_color: str
+    original_cost: int
+    discounted_cost: int
+    discount_percent: int
+    is_seen: bool
+
+
+class NightMarketResponse(BaseModel):
+    active: bool
+    offers: list[NightMarketOffer]
+    seconds_remaining: int

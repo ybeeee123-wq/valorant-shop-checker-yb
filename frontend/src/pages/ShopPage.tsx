@@ -1,26 +1,50 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
-import type { Bundle, SkinOffer, Wallet } from '../types';
-import CountdownTimer from '../components/CountdownTimer';
-import WalletDisplay from '../components/WalletDisplay';
-import SkinCard from '../components/SkinCard';
+import type { Bundle, NightMarketResponse, SkinOffer, Wallet } from '../types';
+import AppShell from '../components/AppShell';
 import BundleCard from '../components/BundleCard';
+import CountdownTimer from '../components/CountdownTimer';
+import EmptyState from '../components/EmptyState';
+import { AlertIcon, HeartIcon, HistoryIcon, RefreshIcon } from '../components/Icons';
+import PageHeader from '../components/PageHeader';
+import Reveal from '../components/Reveal';
+import SkinCard from '../components/SkinCard';
+import NightMarketCard from '../components/NightMarketCard';
+import { HistoryView as PersistentHistoryView, SettingsView, WishlistView as PersistentWishlistView } from '../components/FeatureViews';
+
+type View = 'shop' | 'bundles' | 'night-market' | 'wishlist' | 'history' | 'settings';
+
+const viewFromPath: Record<string, View> = {
+  '/shop': 'shop',
+  '/bundles': 'bundles',
+  '/night-market': 'night-market',
+  '/wishlist': 'wishlist',
+  '/history': 'history',
+  '/settings': 'settings',
+};
 
 export default function ShopPage() {
   const { state, dispatch } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const view = viewFromPath[location.pathname];
 
   const [offers, setOffers] = useState<SkinOffer[]>([]);
   const [secondsRemaining, setSecondsRemaining] = useState(0);
   const [bundles, setBundles] = useState<Bundle[]>([]);
   const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [nightMarket, setNightMarket] = useState<NightMarketResponse | null>(null);
+  const [nightMarketLoading, setNightMarketLoading] = useState(true);
+  const [nightMarketError, setNightMarketError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStoreData = useCallback(async () => {
-    setLoading(true);
+  const fetchStoreData = useCallback(async (quiet = false) => {
+    if (quiet) setRefreshing(true);
+    else setLoading(true);
     setError(null);
 
     try {
@@ -29,13 +53,12 @@ export default function ShopPage() {
         api.getBundles(),
         api.getWallet(),
       ]);
-
       setOffers(dailyRes.offers);
       setSecondsRemaining(dailyRes.seconds_remaining);
       setBundles(bundleRes.bundles);
       setWallet(walletRes);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load store';
+      const message = err instanceof Error ? err.message : 'Unable to load your storefront.';
       if (message.includes('401') || message.includes('Not authenticated') || message.includes('Session expired')) {
         dispatch({ type: 'LOGOUT' });
         navigate('/', { replace: true });
@@ -44,176 +67,191 @@ export default function ShopPage() {
       setError(message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [dispatch, navigate]);
 
+  const fetchNightMarket = useCallback(async () => {
+    setNightMarketLoading(true);
+    setNightMarketError(null);
+
+    try {
+      setNightMarket(await api.getNightMarket());
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to load the Night Market.';
+      if (message.includes('401') || message.includes('Not authenticated') || message.includes('Session expired')) {
+        dispatch({ type: 'LOGOUT' });
+        navigate('/', { replace: true });
+        return;
+      }
+      setNightMarketError(message);
+    } finally {
+      setNightMarketLoading(false);
+    }
+  }, [dispatch, navigate]);
+
+  useEffect(() => { void fetchStoreData(); }, [fetchStoreData]);
+
   useEffect(() => {
-    fetchStoreData();
-  }, [fetchStoreData]);
+    if (view === 'night-market') void fetchNightMarket();
+  }, [fetchNightMarket, view]);
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+  }, [location.pathname]);
 
   async function handleLogout() {
-    await api.logout().catch(() => {});
+    await api.logout().catch(() => undefined);
     dispatch({ type: 'LOGOUT' });
     navigate('/', { replace: true });
   }
 
+  if (!view) return <Navigate to="/shop" replace />;
+
   return (
-    <div className="min-h-svh bg-bg-primary">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-bg-secondary/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-4">
-            <h1
-              className="text-lg tracking-wider text-text-primary"
-              style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}
-            >
-              VAL<span className="text-accent-red">SHOP</span>
-            </h1>
-            {state.puuid && (
-              <span className="hidden text-xs text-text-secondary sm:block">
-                {state.puuid.slice(0, 8)}...
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4">
-            {wallet && <WalletDisplay wallet={wallet} />}
-            <button
-              onClick={handleLogout}
-              className="rounded border border-border px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-text-secondary transition-colors hover:border-accent-red hover:text-accent-red"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        {loading ? (
-          <LoadingSkeleton />
-        ) : error ? (
-          <div className="flex flex-col items-center gap-4 py-20">
-            <p className="text-accent-red">{error}</p>
-            <button
-              onClick={fetchStoreData}
-              className="rounded bg-accent-red px-4 py-2 text-sm font-semibold text-white transition-colors hover:brightness-110"
-            >
-              Retry
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* Countdown */}
-            <div className="mb-8 flex justify-center">
-              <CountdownTimer
-                secondsRemaining={secondsRemaining}
-                onExpire={fetchStoreData}
-              />
-            </div>
-
-            {/* Daily Store */}
-            <section className="mb-12">
-              <h2
-                className="mb-6 text-2xl tracking-wider text-text-primary"
-                style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}
-              >
-                DAILY STORE
-              </h2>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {offers.map((skin) => (
-                  <SkinCard key={skin.uuid} skin={skin} />
-                ))}
-              </div>
-            </section>
-
-            {/* Featured Bundle */}
-            {bundles.length > 0 && (
-              <section>
-                <h2
-                  className="mb-6 text-2xl tracking-wider text-text-primary"
-                  style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }}
-                >
-                  FEATURED BUNDLE
-                </h2>
-                <div className="space-y-4">
-                  {bundles.map((bundle) => (
-                    <BundleCard key={bundle.uuid} bundle={bundle} />
-                  ))}
-                </div>
-              </section>
-            )}
-          </>
+    <AppShell wallet={wallet} puuid={state.puuid} onLogout={handleLogout}>
+      <div key={view} className="page-transition">
+        {view === 'shop' && (
+          <StoreView offers={offers} secondsRemaining={secondsRemaining} loading={loading} refreshing={refreshing} error={error} onRefresh={() => void fetchStoreData(true)} />
         )}
-      </main>
+        {view === 'bundles' && <BundlesView bundles={bundles} loading={loading} error={error} onRetry={() => void fetchStoreData()} />}
+        {view === 'night-market' && <NightMarketView nightMarket={nightMarket} loading={nightMarketLoading} error={nightMarketError} onRetry={() => void fetchNightMarket()} />}
+        {view === 'wishlist' && <PersistentWishlistView today={offers} />}
+        {view === 'history' && <PersistentHistoryView />}
+        {view === 'settings' && <SettingsView />}
+      </div>
+    </AppShell>
+  );
+}
+
+function NightMarketView({ nightMarket, loading, error, onRetry }: { nightMarket: NightMarketResponse | null; loading: boolean; error: string | null; onRetry: () => void }) {
+  const active = nightMarket?.active ?? false;
+  const offers = nightMarket?.offers ?? [];
+
+  return (
+    <>
+      <Reveal direction="none"><PageHeader eyebrow="Personal offers" title="Night Market" description="A limited selection of skins, discounted just for you." /></Reveal>
+
+      {!loading && !error && active && nightMarket && (
+        <Reveal delay={60}><div className="timer-row"><CountdownTimer key={nightMarket.seconds_remaining} secondsRemaining={nightMarket.seconds_remaining} onExpire={onRetry} label="Market closes in" /></div></Reveal>
+      )}
+
+      {loading ? <NightMarketSkeleton /> : error ? <ErrorState message={error} onRetry={onRetry} /> : !active ? (
+        <Reveal delay={100}><EmptyState icon={<AlertIcon className="h-7 w-7" />} label="Night Market" title="No Night Market is currently active" description="Your personalized Night Market will appear here when Riot opens the next event." /></Reveal>
+      ) : offers.length === 0 ? (
+        <Reveal delay={100}><EmptyState icon={<AlertIcon className="h-7 w-7" />} label="Night Market active" title="Offers are unavailable" description="Riot reports an active Night Market, but did not return any valid offers. Try again shortly." actionLabel="Try again" onAction={onRetry} /></Reveal>
+      ) : (
+        <section aria-label="Night Market offers" className="night-market-grid">
+          {offers.map((offer, index) => <Reveal key={offer.bonus_offer_id} delay={100 + index * 70} className="h-full"><NightMarketCard offer={offer} index={index} /></Reveal>)}
+        </section>
+      )}
+    </>
+  );
+}
+
+interface StoreViewProps {
+  offers: SkinOffer[];
+  secondsRemaining: number;
+  loading: boolean;
+  refreshing: boolean;
+  error: string | null;
+  onRefresh: () => void;
+}
+
+function StoreView({ offers, secondsRemaining, loading, refreshing, error, onRefresh }: StoreViewProps) {
+  return (
+    <>
+      <Reveal direction="none">
+        <PageHeader
+          eyebrow="Daily rotation"
+          title="Your Daily Shop"
+          description="Today’s four offers."
+          compact
+          action={<button type="button" onClick={onRefresh} disabled={loading || refreshing} className="secondary-button"><RefreshIcon className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />{refreshing ? 'Refreshing' : 'Refresh'}</button>}
+        />
+      </Reveal>
+
+      {!loading && !error && <Reveal delay={60}><div className="timer-row"><CountdownTimer key={secondsRemaining} secondsRemaining={secondsRemaining} onExpire={onRefresh} /></div></Reveal>}
+
+      {loading ? <StoreSkeleton /> : error ? <ErrorState message={error} onRetry={onRefresh} /> : offers.length === 0 ? (
+        <EmptyState icon={<AlertIcon className="h-7 w-7" />} label="No offers returned" title="Your store is quiet" description="Riot did not return any daily offers. Refresh once, or check again after the next reset." actionLabel="Refresh store" onAction={onRefresh} />
+      ) : (
+        <section aria-label="Daily skin offers" className="skin-grid">
+          {offers.map((skin, index) => <Reveal key={skin.uuid} delay={100 + index * 70} className="h-full"><SkinCard skin={skin} index={index} /></Reveal>)}
+        </section>
+      )}
+
+    </>
+  );
+}
+
+function BundlesView({ bundles, loading, error, onRetry }: { bundles: Bundle[]; loading: boolean; error: string | null; onRetry: () => void }) {
+  return (
+    <>
+      <Reveal direction="none"><PageHeader eyebrow="Featured" title="Featured Bundles" description="Limited-time collections currently live in the VALORANT store." /></Reveal>
+      {loading ? <BundleSkeleton /> : error ? <ErrorState message={error} onRetry={onRetry} /> : bundles.length === 0 ? (
+        <EmptyState icon={<AlertIcon className="h-7 w-7" />} label="No featured collections" title="Nothing featured right now" description="There are no active bundles in the storefront. Check back after the next store update." />
+      ) : (
+        <section aria-label="Featured bundles" className="bundle-list">{bundles.map((bundle, index) => <Reveal key={`${bundle.uuid}-${bundle.duration_remaining_secs}`} delay={index * 100}><BundleCard bundle={bundle} /></Reveal>)}</section>
+      )}
+    </>
+  );
+}
+
+export function WishlistView() {
+  return (
+    <>
+      <Reveal direction="none"><PageHeader eyebrow="Planning" title="Wishlist" description="Keep a shortlist of skins you want to watch for in future rotations." /></Reveal>
+      <Reveal delay={100}><EmptyState icon={<HeartIcon className="h-7 w-7" />} label="Wishlist empty" title="Save the ones you want" description="Wishlist tracking is being prepared. Soon, you’ll be able to save skins and spot them instantly when they appear in your daily shop." actionLabel="Add skins to your wishlist" /></Reveal>
+    </>
+  );
+}
+
+export function HistoryView() {
+  return (
+    <>
+      <Reveal direction="none"><PageHeader eyebrow="Archive" title="Shop History" description="A future record of the daily offers previously shown on this account." /></Reveal>
+      <Reveal delay={100}><EmptyState icon={<HistoryIcon className="h-7 w-7" />} label="No history yet" title="Nothing to look back on yet" description="Store history is not being recorded yet. When this feature arrives, your past rotations will appear here." /></Reveal>
+    </>
+  );
+}
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <section className="error-state">
+      <div>
+        <AlertIcon className="h-7 w-7" />
+        <h2>We couldn’t reach your store</h2>
+        <p>{message}</p>
+        <button type="button" onClick={onRetry} className="secondary-button"><RefreshIcon className="h-4 w-4" />Try again</button>
+      </div>
+    </section>
+  );
+}
+
+function StoreSkeleton() {
+  return (
+    <div className="skeleton-wrap" aria-label="Loading daily offers">
+      <div className="skeleton-timer" />
+      <div className="skin-grid">
+        {[0, 1, 2, 3].map((item) => <div key={item} className="skeleton-card"><div /><span /></div>)}
+      </div>
     </div>
   );
 }
 
-function SkinCardSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-lg border border-border bg-bg-card">
-      <div className="h-0.5 bg-bg-secondary" />
-      <div className="flex aspect-video items-center justify-center p-4">
-        <div className="h-3/4 w-3/4 rounded bg-bg-secondary/50" />
-      </div>
-      <div className="flex items-end justify-between border-t border-border p-4">
-        <div className="space-y-2">
-          <div className="h-5 w-32 rounded bg-bg-secondary" />
-          <div className="h-4 w-16 rounded-full bg-bg-secondary" />
-        </div>
-        <div className="h-5 w-20 rounded bg-bg-secondary" />
-      </div>
-    </div>
-  );
+function BundleSkeleton() {
+  return <div className="bundle-skeleton" aria-label="Loading featured bundles" />;
 }
 
-function BundleCardSkeleton() {
+function NightMarketSkeleton() {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-bg-card">
-      <div className="flex items-center justify-between border-b border-border px-6 py-4">
-        <div className="h-6 w-40 rounded bg-bg-secondary" />
-        <div className="h-5 w-24 rounded bg-bg-secondary" />
+    <div className="skeleton-wrap" aria-label="Loading Night Market offers">
+      <div className="skeleton-timer" />
+      <div className="night-market-grid">
+        {[0, 1, 2, 3, 4, 5].map((item) => <div key={item} className="skeleton-card"><div /><span /></div>)}
       </div>
-      <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="flex flex-col items-center rounded border border-border/50 bg-bg-secondary p-2">
-            <div className="mb-2 h-16 w-full rounded bg-bg-primary/30" />
-            <div className="h-3 w-20 rounded bg-bg-primary/30" />
-            <div className="mt-1 h-3 w-12 rounded bg-bg-primary/30" />
-          </div>
-        ))}
-      </div>
-      <div className="flex justify-end border-t border-border px-6 py-4">
-        <div className="h-6 w-28 rounded bg-bg-secondary" />
-      </div>
-    </div>
-  );
-}
-
-function LoadingSkeleton() {
-  return (
-    <div className="animate-pulse">
-      {/* Countdown placeholder */}
-      <div className="mb-8 flex justify-center">
-        <div className="h-7 w-72 rounded bg-bg-card" />
-      </div>
-
-      {/* Section heading */}
-      <div className="mb-6 h-8 w-40 rounded bg-bg-card" />
-
-      {/* Skin cards grid */}
-      <div className="mb-12 grid grid-cols-1 gap-4 md:grid-cols-2">
-        {[0, 1, 2, 3].map((i) => (
-          <SkinCardSkeleton key={i} />
-        ))}
-      </div>
-
-      {/* Bundle heading */}
-      <div className="mb-6 h-8 w-52 rounded bg-bg-card" />
-
-      {/* Bundle card */}
-      <BundleCardSkeleton />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import ShopPage from './pages/ShopPage';
+import ConnectCompanionPage from './pages/ConnectCompanionPage';
 
 export default function App() {
   return (
@@ -12,8 +13,9 @@ export default function App() {
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<LoginPage />} />
+            <Route path="/connect-companion" element={<ProtectedRoute><ConnectCompanionPage /></ProtectedRoute>} />
             <Route
-              path="/shop"
+              path="/*"
               element={
                 <ProtectedRoute>
                   <ShopPage />

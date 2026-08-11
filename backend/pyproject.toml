@@ -11,6 +11,9 @@ dependencies = [
     "cryptography>=43.0.0",
     "pydantic-settings>=2.6.0",
     "python-multipart>=0.0.12",
+    "sqlalchemy>=2.0.36",
+    "psycopg[binary]>=3.2.3",
+    "pywebpush>=2.0.3",
 ]
 
 [project.optional-dependencies]
@@ -25,10 +28,20 @@ dev = [
 requires = ["setuptools>=75.0"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+include = ["app*"]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 100
 
+[tool.ruff.lint]
+ignore = ["B008", "BLE001", "UP017"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
+
+[[tool.mypy.overrides]]
+module = ["app.models.auth", "app.routers.auth", "app.services.riot_auth"]
+disable_error_code = ["type-arg", "no-any-return"]

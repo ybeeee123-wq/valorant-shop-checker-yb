@@ -1,6 +1,12 @@
 import type {
   BundleResponse,
   DailyStoreResponse,
+  NightMarketResponse,
+  SkinCatalogItem,
+  WishlistItem,
+  HistorySnapshot,
+  NotificationPreferences,
+  CompanionStatus,
   SessionResponse,
   Wallet,
 } from '../types';
@@ -81,4 +87,46 @@ export function getBundles(): Promise<BundleResponse> {
 
 export function getWallet(): Promise<Wallet> {
   return request('/api/store/wallet');
+}
+
+export function getNightMarket(): Promise<NightMarketResponse> {
+  return request('/api/store/night-market');
+}
+
+export function getSkins(q = '', weapon = ''): Promise<SkinCatalogItem[]> {
+  return request(`/api/skins?q=${encodeURIComponent(q)}&weapon=${encodeURIComponent(weapon)}&limit=100`);
+}
+
+export function getWishlist(): Promise<WishlistItem[]> { return request('/api/wishlist'); }
+export function addWishlist(skin_uuid: string): Promise<WishlistItem> {
+  return request('/api/wishlist', { method: 'POST', body: JSON.stringify({ skin_uuid }) });
+}
+export function removeWishlist(skinUuid: string): Promise<void> {
+  return request(`/api/wishlist/${encodeURIComponent(skinUuid)}`, { method: 'DELETE' });
+}
+export function getHistory(): Promise<HistorySnapshot[]> { return request('/api/history'); }
+export function getNotificationPreferences(): Promise<NotificationPreferences> { return request('/api/notifications/preferences'); }
+export function updateNotificationPreferences(body: Record<string, unknown>): Promise<NotificationPreferences> {
+  return request('/api/notifications/preferences', { method: 'PUT', body: JSON.stringify(body) });
+}
+export function getVapidPublicKey(): Promise<{ public_key: string }> { return request('/api/notifications/vapid-public-key'); }
+export function subscribePush(subscription: PushSubscriptionJSON): Promise<void> {
+  return request('/api/notifications/push/subscribe', {
+    method: 'POST',
+    body: JSON.stringify({ endpoint: subscription.endpoint, p256dh: subscription.keys?.p256dh, auth: subscription.keys?.auth }),
+  });
+}
+export function unsubscribePush(endpoint: string): Promise<void> {
+  return request('/api/notifications/push/subscribe', { method: 'DELETE', body: JSON.stringify({ endpoint }) });
+}
+export function testNotification(channel: 'web_push' | 'discord'): Promise<{ status: string }> {
+  return request('/api/notifications/test', { method: 'POST', body: JSON.stringify({ channel }) });
+}
+export function getCompanionStatus(): Promise<CompanionStatus> { return request('/api/companion/status'); }
+export function revokeCompanion(): Promise<void> { return request('/api/companion/device', { method: 'DELETE' }); }
+export function getPairingStatus(challenge: string): Promise<{ status: string; device_name?: string | null }> {
+  return request(`/api/companion/pairing/status?challenge=${encodeURIComponent(challenge)}`);
+}
+export function approvePairing(challenge: string): Promise<{ status: string; device_name?: string | null }> {
+  return request('/api/companion/pairing/approve', { method: 'POST', body: JSON.stringify({ challenge }) });
 }
