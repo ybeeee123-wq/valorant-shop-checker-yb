@@ -31,8 +31,8 @@ export default function AppShell({ children, wallet, puuid, onLogout }: AppShell
           <NavLink to="/shop" className="brand-link"><Brand /></NavLink>
 
           <nav className="desktop-nav" aria-label="Primary navigation">
-            {navigation.map(({ to, label }) => (
-              <NavLink key={to} to={to} className={({ isActive }) => `desktop-nav-link ${isActive ? 'is-active' : ''}`}>{label}</NavLink>
+            {navigation.map(({ to, label }, index) => (
+              <NavLink key={to} to={to} data-index={`${index + 1}`.padStart(2, '0')} className={({ isActive }) => `desktop-nav-link ${isActive ? 'is-active' : ''}`}>{label}</NavLink>
             ))}
           </nav>
 
@@ -49,7 +49,10 @@ export default function AppShell({ children, wallet, puuid, onLogout }: AppShell
         </div>
       </header>
 
-      <main id="main-content" className="app-main">{children}</main>
+      <main id="main-content" className="app-main">
+        <div className="interface-rail" aria-hidden="true"><span>VALSHOP</span><i /><span>STORE INTELLIGENCE</span><i /><span>LIVE ACCOUNT</span></div>
+        {children}
+      </main>
       <footer className="app-footer">Made by yb</footer>
 
       <nav className="mobile-nav" aria-label="Mobile navigation">
