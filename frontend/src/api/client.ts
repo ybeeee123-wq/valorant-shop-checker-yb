@@ -14,6 +14,20 @@ import type {
 const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 const TOKEN_KEY = 'session_token';
 
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+export function isAuthenticationError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
+}
+
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -27,24 +41,22 @@ export function clearToken(): void {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers = new Headers(options?.headers);
+  if (options?.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
   const token = getStoredToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+  if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers,
     ...options,
+    headers,
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail ?? `Request failed: ${res.status}`);
+    const body = await res.json().catch(() => ({})) as { detail?: string };
+    throw new ApiError(body.detail ?? `Request failed: ${res.status}`, res.status);
   }
-  return res.json();
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
 }
 
 // Auth
@@ -93,8 +105,8 @@ export function getNightMarket(): Promise<NightMarketResponse> {
   return request('/api/store/night-market');
 }
 
-export function getSkins(q = '', weapon = ''): Promise<SkinCatalogItem[]> {
-  return request(`/api/skins?q=${encodeURIComponent(q)}&weapon=${encodeURIComponent(weapon)}&limit=100`);
+export function getSkins(q = '', weapon = '', signal?: AbortSignal): Promise<SkinCatalogItem[]> {
+  return request(`/api/skins?q=${encodeURIComponent(q)}&weapon=${encodeURIComponent(weapon)}&limit=100`, { signal });
 }
 
 export function getWishlist(): Promise<WishlistItem[]> { return request('/api/wishlist'); }

@@ -6,12 +6,13 @@ import random
 import sys
 import webbrowser
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
+from app.services import riot_auth
 from packaging.version import Version
 from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, QUrl, Signal
-from PySide6.QtGui import QAction, QDesktopServices, QFont, QIcon
+from PySide6.QtGui import QAction, QDesktopServices, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -29,7 +30,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.services import riot_auth
 from callback import LocalCallback
 from cloud_client import CloudClient
 from config import settings
@@ -638,14 +638,14 @@ class MainWindow(QMainWindow):
         self.run_worker(report, on_error=lambda _message: None)
 
     def _schedule_sync(self, delay_seconds: int) -> None:
-        self.next_sync_at = datetime.now(timezone.utc) + timedelta(seconds=delay_seconds)
+        self.next_sync_at = datetime.now(UTC) + timedelta(seconds=delay_seconds)
         self.sync_timer.start(delay_seconds * 1_000)
         self._update_next_check()
 
     def _check_overdue_sync(self) -> None:
         if (
             self.next_sync_at
-            and datetime.now(timezone.utc) >= self.next_sync_at
+            and datetime.now(UTC) >= self.next_sync_at
             and not self.syncing
         ):
             self.sync_now()
@@ -654,7 +654,7 @@ class MainWindow(QMainWindow):
         if not self.next_sync_at:
             self.next_check_value.setText("Waiting")
             return
-        remaining = max(0, int((self.next_sync_at - datetime.now(timezone.utc)).total_seconds()))
+        remaining = max(0, int((self.next_sync_at - datetime.now(UTC)).total_seconds()))
         hours, remainder = divmod(remaining, 3_600)
         minutes, seconds = divmod(remainder, 60)
         local_time = self.next_sync_at.astimezone().strftime("%I:%M %p").lstrip("0")

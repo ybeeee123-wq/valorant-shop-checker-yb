@@ -16,6 +16,7 @@ pushd backend
 popd
 pushd companion
 ..\backend\.venv\Scripts\python.exe -m pytest -q || exit /b 1
+..\backend\.venv\Scripts\python.exe -m ruff check . || exit /b 1
 popd
 pushd frontend
 call npm.cmd ci || exit /b 1

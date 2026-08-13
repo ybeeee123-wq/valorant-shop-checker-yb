@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
@@ -16,7 +16,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => { document.title = 'VALSHOP — Daily Store Checker'; }, []);
+
   if (state.status === 'authenticated') return <Navigate to={sessionStorage.getItem('post_login_path') ?? '/shop'} replace />;
+  if (state.status === 'checking') return <div className="route-loader" role="status" aria-live="polite"><span aria-hidden="true" />Checking your session</div>;
 
   async function handleOpenLogin() {
     setLoading(true);
@@ -79,7 +82,7 @@ export default function LoginPage() {
 
           {stage === 'start' ? (
             <div className="login-action-block">
-              <button type="button" onClick={handleOpenLogin} disabled={loading} className="primary-button login-button">
+              <button type="button" onClick={handleOpenLogin} disabled={loading} className="primary-button login-button" aria-busy={loading}>
                 {loading ? <Spinner /> : <span className="button-dot" />}
                 <span>Sign in with Riot</span>
                 {!loading && <ChevronRightIcon className="h-4 w-4" />}
@@ -99,7 +102,7 @@ export default function LoginPage() {
               <form onSubmit={handleSubmitUrl} className="callback-form">
                 <label htmlFor="riot-callback-url">Riot callback URL</label>
                 <textarea id="riot-callback-url" value={pastedUrl} onChange={(event) => setPastedUrl(event.target.value)} placeholder="http://localhost/redirect#..." rows={3} className="login-input" />
-                <button type="submit" disabled={loading || !pastedUrl.trim()} className="primary-button login-button">
+                <button type="submit" disabled={loading || !pastedUrl.trim()} className="primary-button login-button" aria-busy={loading}>
                   {loading && <Spinner />}Complete sign in<ChevronRightIcon className="h-4 w-4" />
                 </button>
               </form>

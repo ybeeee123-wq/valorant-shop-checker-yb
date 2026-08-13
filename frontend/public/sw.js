@@ -1,11 +1,30 @@
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {};
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data?.text() };
+  }
   event.waitUntil(self.registration.showNotification(data.title || 'VALSHOP', {
     body: data.body || 'A wishlist skin is available.',
-    icon: '/favicon-v3.png', badge: '/favicon-v3.png', data: { url: data.url || '/' },
+    icon: '/favicon-v3.png',
+    badge: '/favicon-v3.png',
+    tag: data.tag || 'valshop-wishlist',
+    data: { url: data.url || '/shop' },
   }));
 });
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data.url || '/'));
+  let destination = `${self.location.origin}/shop`;
+  try {
+    const requested = new URL(event.notification.data.url || '/shop', self.location.origin);
+    if (requested.origin === self.location.origin) destination = requested.href;
+  } catch {
+    // Keep the safe shop fallback for malformed notification data.
+  }
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+    const existing = windows.find((client) => client.url.startsWith(self.location.origin));
+    if (existing) return existing.navigate(destination).then(() => existing.focus());
+    return clients.openWindow(destination);
+  }));
 });

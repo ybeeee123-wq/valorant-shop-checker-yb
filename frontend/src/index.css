@@ -69,6 +69,11 @@ a { color: inherit; text-decoration: none; }
 ::selection { background: rgba(230,74,89,.18); color: var(--ink); }
 #root { min-height: 100svh; }
 
+.skip-link { position: fixed; z-index: 100; top: 10px; left: 10px; transform: translateY(-160%); border-radius: 999px; background: var(--ink); padding: 10px 16px; color: var(--paper); font-size: 12px; font-weight: 700; transition: transform 180ms var(--ease-out); }
+.skip-link:focus { transform: translateY(0); }
+.route-loader { display: flex; min-height: 100svh; align-items: center; justify-content: center; gap: 12px; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+.route-loader>span { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: soft-pulse 1s ease-in-out infinite; }
+
 .app-shell { min-height: 100svh; background: var(--paper); transition: background-color 320ms ease; }
 .app-header { position: sticky; z-index: 50; top: 0; border-bottom: 1px solid var(--line); background: var(--header-bg); backdrop-filter: blur(18px) saturate(140%); transition: background-color 320ms ease,border-color 320ms ease; }
 .app-header-inner { display: grid; width: min(100% - 40px,1480px); height: 78px; margin: 0 auto; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 28px; }
@@ -218,7 +223,14 @@ a { color: inherit; text-decoration: none; }
 .catalog-copy b { display: block; margin-top: 7px; color: var(--accent); font-size: 8px; text-transform: uppercase; letter-spacing: .1em; }
 .wishlist-button { display: flex; width: 100%; min-height: 42px; align-items: center; justify-content: center; gap: 7px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 10px; font-weight: 700; }
 .wishlist-button.is-saved { background: var(--ink); color: var(--paper); }
+.wishlist-button:disabled { opacity: .55; }
+.catalog-skeleton { min-height: 290px; animation: soft-pulse 1.5s ease-in-out infinite; }
+.catalog-skeleton>div { height: 160px; background: var(--skeleton); }
+.catalog-skeleton>span { display: block; width: 45%; height: 12px; margin: 32px 14px; border-radius: 999px; background: var(--line-strong); }
 .history-list { display: flex; flex-direction: column; gap: 18px; }
+.history-skeleton { height: 250px; border: 1px solid var(--line); background: var(--skeleton-soft); animation: soft-pulse 1.5s ease-in-out infinite; }
+.history-skeleton>span { display: block; width: 180px; height: 16px; margin: 24px; border-radius: 999px; background: var(--skeleton); }
+.history-skeleton>div { height: 170px; margin-top: 28px; border-top: 1px solid var(--line); background: var(--skeleton); }
 .history-snapshot { border: 1px solid var(--line); background: var(--surface); }
 .history-snapshot>header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 18px 20px; }
 .history-snapshot header span,.settings-card>span { color: var(--accent); font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .13em; }

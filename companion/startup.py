@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 
 

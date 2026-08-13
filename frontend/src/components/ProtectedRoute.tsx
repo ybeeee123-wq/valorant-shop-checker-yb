@@ -5,9 +5,8 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const { state } = useAuth();
   const location = useLocation();
 
-  if (state.status === 'idle') {
-    // Still checking session
-    return null;
+  if (state.status === 'checking') {
+    return <div className="route-loader" role="status" aria-live="polite"><span aria-hidden="true" />Checking your session</div>;
   }
 
   if (!state.sessionValid) {

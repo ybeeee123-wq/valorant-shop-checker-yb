@@ -1,15 +1,14 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
 import riot_client
-from riot_client import ReauthenticationRequired
-from riot_client import sync_payload
+from riot_client import ReauthenticationRequired, sync_payload
 from scheduler import backoff_seconds, next_check_at
 
 
 def test_schedule_calculation() -> None:
-    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    now = datetime(2026, 1, 1, tzinfo=UTC)
     scheduled = next_check_at(100, jitter_seconds=15, now=now)
     assert (scheduled - now).total_seconds() == 115
 

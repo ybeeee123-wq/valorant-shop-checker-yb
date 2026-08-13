@@ -103,7 +103,7 @@ export interface CompanionStatus {
 // Auth state
 
 export interface AuthState {
-  status: 'idle' | 'loading' | 'authenticated' | 'error';
+  status: 'checking' | 'loading' | 'authenticated' | 'unauthenticated' | 'error';
   sessionValid: boolean;
   puuid: string | null;
   error: string | null;
@@ -114,4 +114,5 @@ export type AuthAction =
   | { type: 'LOGIN_SUCCESS'; puuid: string }
   | { type: 'LOGIN_ERROR'; error: string }
   | { type: 'LOGOUT' }
+  | { type: 'SESSION_INVALID' }
   | { type: 'SESSION_RESTORED'; puuid: string };

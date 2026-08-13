@@ -7,12 +7,12 @@ import Brand from './Brand';
 import { BundleIcon, HeartIcon, HistoryIcon, LogoutIcon, NightMarketIcon, SettingsIcon, ShopIcon } from './Icons';
 
 const navigation = [
-  { to: '/shop', label: 'Shop', icon: ShopIcon },
-  { to: '/bundles', label: 'Bundles', icon: BundleIcon },
-  { to: '/wishlist', label: 'Wishlist', icon: HeartIcon },
-  { to: '/history', label: 'History', icon: HistoryIcon },
-  { to: '/settings', label: 'Settings', icon: SettingsIcon },
-  { to: '/night-market', label: 'Night Market', icon: NightMarketIcon },
+  { to: '/shop', label: 'Shop', mobileLabel: 'Shop', icon: ShopIcon },
+  { to: '/bundles', label: 'Bundles', mobileLabel: 'Bundles', icon: BundleIcon },
+  { to: '/wishlist', label: 'Wishlist', mobileLabel: 'Wishlist', icon: HeartIcon },
+  { to: '/history', label: 'History', mobileLabel: 'History', icon: HistoryIcon },
+  { to: '/settings', label: 'Settings', mobileLabel: 'Settings', icon: SettingsIcon },
+  { to: '/night-market', label: 'Night Market', mobileLabel: 'Market', icon: NightMarketIcon },
 ];
 
 interface AppShellProps {
@@ -25,6 +25,7 @@ interface AppShellProps {
 export default function AppShell({ children, wallet, puuid, onLogout }: AppShellProps) {
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">Skip to content</a>
       <header className="app-header">
         <div className="app-header-inner">
           <NavLink to="/shop" className="brand-link"><Brand /></NavLink>
@@ -48,13 +49,13 @@ export default function AppShell({ children, wallet, puuid, onLogout }: AppShell
         </div>
       </header>
 
-      <main className="app-main">{children}</main>
+      <main id="main-content" className="app-main">{children}</main>
       <footer className="app-footer">Made by yb</footer>
 
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        {navigation.map(({ to, label, icon: Icon }) => (
-          <NavLink key={to} to={to} className={({ isActive }) => `mobile-nav-item ${isActive ? 'is-active' : ''}`}>
-            <Icon className="h-[19px] w-[19px]" /><span>{label}</span>
+        {navigation.map(({ to, label, mobileLabel, icon: Icon }) => (
+          <NavLink key={to} to={to} aria-label={label} className={({ isActive }) => `mobile-nav-item ${isActive ? 'is-active' : ''}`}>
+            <Icon className="h-[19px] w-[19px]" /><span>{mobileLabel}</span>
           </NavLink>
         ))}
       </nav>

@@ -1,8 +1,8 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
-
 from app.services import asset_cache, riot_auth, storefront
+
 from credentials import CredentialStore
 
 
@@ -33,7 +33,7 @@ class LocalRiotClient:
             "puuid": puuid,
             "region": region,
             "shard": shard,
-            "expires_at": (datetime.now(timezone.utc) + timedelta(hours=3)).isoformat(),
+            "expires_at": (datetime.now(UTC) + timedelta(hours=3)).isoformat(),
         }
         self.credentials.save_riot_session(self.session)
         return {"puuid": puuid, "region": region}
@@ -43,7 +43,7 @@ class LocalRiotClient:
             return False
         try:
             expires = datetime.fromisoformat(self.session["expires_at"])
-            if expires <= datetime.now(timezone.utc):
+            if expires <= datetime.now(UTC):
                 return False
             return await riot_auth.get_player_info(self.session["access_token"]) == self.session["puuid"]
         except (KeyError, ValueError, httpx.HTTPError):
@@ -69,10 +69,10 @@ class LocalRiotClient:
             if exc.response.status_code in {401, 403}:
                 raise RiotConnectionExpired("Riot connection expired") from exc
             raise
-        reset = datetime.now(timezone.utc) + timedelta(seconds=daily.seconds_remaining)
+        reset = datetime.now(UTC) + timedelta(seconds=daily.seconds_remaining)
         return {
             "rotation_key": reset.strftime("%Y%m%dT%H%MZ"),
-            "fetched_at": datetime.now(timezone.utc).isoformat(),
+            "fetched_at": datetime.now(UTC).isoformat(),
             "seconds_remaining": daily.seconds_remaining,
             "offers": [offer.model_dump() for offer in daily.offers],
             "bundles": bundles.model_dump()["bundles"],

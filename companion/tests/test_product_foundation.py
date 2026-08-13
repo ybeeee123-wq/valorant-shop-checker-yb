@@ -1,6 +1,6 @@
 import json
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -31,7 +31,7 @@ def test_credentials_and_riot_session_restore() -> None:
     session = {
         "access_token": "sensitive" * 500,
         "puuid": "player",
-        "expires_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+        "expires_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
     }
     credentials.save_riot_session(session)
     credentials.save_device_token("device-secret")
@@ -58,7 +58,7 @@ def test_offline_queue_history_and_notification_dedupe(tmp_path) -> None:
     store = LocalStore(str(tmp_path / "cache.db"))
     shop = {
         "rotation_key": "rotation-1",
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "fetched_at": datetime.now(UTC).isoformat(),
         "seconds_remaining": 300,
         "offers": [{"uuid": "skin", "name": "Skin", "cost": 875}],
     }

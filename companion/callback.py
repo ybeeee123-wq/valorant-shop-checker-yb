@@ -3,7 +3,6 @@ import queue
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-
 CALLBACK_HTML = b"""<!doctype html><meta charset='utf-8'><title>VALSHOP</title>
 <style>body{font-family:Segoe UI,sans-serif;background:#111;color:#eee;display:grid;place-items:center;height:100vh;margin:0}div{text-align:center}b{color:#ff6572}</style>
 <div><h1>VAL<b>SHOP</b></h1><p id='s'>Finishing Riot connection...</p></div>

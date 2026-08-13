@@ -7,7 +7,7 @@ import AppShell from '../components/AppShell';
 import BundleCard from '../components/BundleCard';
 import CountdownTimer from '../components/CountdownTimer';
 import EmptyState from '../components/EmptyState';
-import { AlertIcon, HeartIcon, HistoryIcon, RefreshIcon } from '../components/Icons';
+import { AlertIcon, RefreshIcon } from '../components/Icons';
 import PageHeader from '../components/PageHeader';
 import Reveal from '../components/Reveal';
 import SkinCard from '../components/SkinCard';
@@ -59,7 +59,7 @@ export default function ShopPage() {
       setWallet(walletRes);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to load your storefront.';
-      if (message.includes('401') || message.includes('Not authenticated') || message.includes('Session expired')) {
+      if (api.isAuthenticationError(err)) {
         dispatch({ type: 'LOGOUT' });
         navigate('/', { replace: true });
         return;
@@ -79,7 +79,7 @@ export default function ShopPage() {
       setNightMarket(await api.getNightMarket());
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to load the Night Market.';
-      if (message.includes('401') || message.includes('Not authenticated') || message.includes('Session expired')) {
+      if (api.isAuthenticationError(err)) {
         dispatch({ type: 'LOGOUT' });
         navigate('/', { replace: true });
         return;
@@ -97,9 +97,12 @@ export default function ShopPage() {
   }, [fetchNightMarket, view]);
 
   useEffect(() => {
+    if (!view) return;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
-  }, [location.pathname]);
+    const title = view === 'night-market' ? 'Night Market' : `${view.charAt(0).toUpperCase()}${view.slice(1)}`;
+    document.title = `${title} — VALSHOP`;
+  }, [location.pathname, view]);
 
   async function handleLogout() {
     await api.logout().catch(() => undefined);
@@ -195,24 +198,6 @@ function BundlesView({ bundles, loading, error, onRetry }: { bundles: Bundle[]; 
       ) : (
         <section aria-label="Featured bundles" className="bundle-list">{bundles.map((bundle, index) => <Reveal key={`${bundle.uuid}-${bundle.duration_remaining_secs}`} delay={index * 100}><BundleCard bundle={bundle} /></Reveal>)}</section>
       )}
-    </>
-  );
-}
-
-export function WishlistView() {
-  return (
-    <>
-      <Reveal direction="none"><PageHeader eyebrow="Planning" title="Wishlist" description="Keep a shortlist of skins you want to watch for in future rotations." /></Reveal>
-      <Reveal delay={100}><EmptyState icon={<HeartIcon className="h-7 w-7" />} label="Wishlist empty" title="Save the ones you want" description="Wishlist tracking is being prepared. Soon, you’ll be able to save skins and spot them instantly when they appear in your daily shop." actionLabel="Add skins to your wishlist" /></Reveal>
-    </>
-  );
-}
-
-export function HistoryView() {
-  return (
-    <>
-      <Reveal direction="none"><PageHeader eyebrow="Archive" title="Shop History" description="A future record of the daily offers previously shown on this account." /></Reveal>
-      <Reveal delay={100}><EmptyState icon={<HistoryIcon className="h-7 w-7" />} label="No history yet" title="Nothing to look back on yet" description="Store history is not being recorded yet. When this feature arrives, your past rotations will appear here." /></Reveal>
     </>
   );
 }

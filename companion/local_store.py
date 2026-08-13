@@ -1,7 +1,7 @@
 import json
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from paths import CACHE_DB, ensure_directories
 
@@ -23,7 +23,7 @@ class LocalStore:
 
     def set_cache(self, key: str, value) -> None:
         with self.lock:
-            self.connection.execute("insert or replace into cache values(?,?,?)", (key, json.dumps(value), datetime.now(timezone.utc).isoformat()))
+            self.connection.execute("insert or replace into cache values(?,?,?)", (key, json.dumps(value), datetime.now(UTC).isoformat()))
             self.connection.commit()
 
     def get_cache(self, key: str, default=None):
@@ -51,7 +51,7 @@ class LocalStore:
         key = payload["rotation_key"]
         self.set_cache("shop", payload)
         with self.lock:
-            self.connection.execute("insert or replace into history values(?,?,?)", (key, json.dumps(payload), payload.get("fetched_at", datetime.now(timezone.utc).isoformat())))
+            self.connection.execute("insert or replace into history values(?,?,?)", (key, json.dumps(payload), payload.get("fetched_at", datetime.now(UTC).isoformat())))
             self.connection.execute("insert or replace into pending_sync(rotation_key,payload,attempts) values(?,?,coalesce((select attempts from pending_sync where rotation_key=?),0))", (key, json.dumps(payload), key))
             self.connection.commit()
 

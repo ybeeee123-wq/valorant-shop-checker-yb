@@ -1,23 +1,10 @@
 import type { CSSProperties } from 'react';
 import type { SkinOffer } from '../types';
+import { getContentTierColor } from '../utils/contentTier';
 import { VPIcon } from './Icons';
 
-const TIER_COLOR_MAP: Record<string, string> = {
-  select: '#4f88b8',
-  deluxe: '#268e7d',
-  premium: '#b84e7e',
-  ultra: '#aa7e18',
-  exclusive: '#c46432',
-};
-
-function getTierColor(tierName: string, apiColor: string): string {
-  const key = tierName.toLowerCase().replace(/\s*edition$/i, '');
-  const normalizedApiColor = apiColor.replace('#', '').slice(0, 6);
-  return TIER_COLOR_MAP[key] || (/^[0-9a-f]{6}$/i.test(normalizedApiColor) ? `#${normalizedApiColor}` : '#6f756f');
-}
-
 export default function SkinCard({ skin, index = 0 }: { skin: SkinOffer; index?: number }) {
-  const tierColor = getTierColor(skin.content_tier_name, skin.content_tier_color);
+  const tierColor = getContentTierColor(skin.content_tier_name, skin.content_tier_color);
 
   return (
     <article className="skin-card group" style={{ '--tier-color': tierColor, '--card-index': index } as CSSProperties}>
