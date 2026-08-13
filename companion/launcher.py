@@ -45,8 +45,10 @@ def packaged_smoke_preflight() -> None:
 
 def main() -> None:
     multiprocessing.freeze_support()
-    if os.environ.get("VALSHOP_SMOKE_TEST") == "1":
+    smoke_mode = os.environ.get("VALSHOP_SMOKE_TEST")
+    if smoke_mode == "1":
         packaged_smoke_preflight()
+    if smoke_mode:
         return
     raise SystemExit(run_desktop())
 

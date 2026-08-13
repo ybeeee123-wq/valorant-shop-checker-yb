@@ -26,7 +26,7 @@ popd
 if not exist companion\assets\valshop.ico backend\.venv\Scripts\python.exe -c "from PIL import Image; im=Image.open('frontend/public/favicon-v3.png').convert('RGBA'); im.save('companion/assets/valshop.ico',sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])" || exit /b 1
 backend\.venv\Scripts\pyinstaller.exe --noconfirm --clean --distpath dist --workpath build companion\VALSHOP.spec || exit /b 1
 
-set VALSHOP_SMOKE_TEST=1
+if not defined VALSHOP_SMOKE_TEST set VALSHOP_SMOKE_TEST=1
 dist\VALSHOP\VALSHOP.exe
 if errorlevel 1 exit /b 1
 set VALSHOP_SMOKE_TEST=
