@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
-from app.models.auth import SessionData
 from app.models.cloud import (
     CompanionHeartbeat,
     CompanionStatus,
@@ -38,16 +37,16 @@ from app.models.persistence import (
     User,
     WishlistItem,
 )
-from app.routers.store import get_session
+from app.routers.auth import authenticated_user
 from app.services import asset_cache, storefront
 from app.services.cloud import (
     decrypt_secret,
     encrypt_secret,
     evaluate_latest_snapshot,
-    get_or_create_user,
     get_preferences,
     notify_matches,
     record_snapshot,
+    record_storefront_state,
     secure_hash,
     send_discord,
     send_web_push,
@@ -75,8 +74,8 @@ def _aware(value: datetime) -> datetime:
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
 
 
-def current_user(session: SessionData = Depends(get_session), db: Session = Depends(get_db)) -> User:
-    return get_or_create_user(db, session.puuid)
+def current_user(user: User = Depends(authenticated_user)) -> User:
+    return user
 
 
 def companion_device(
@@ -385,6 +384,7 @@ async def companion_sync(body: ShopSyncRequest, device: CompanionDevice = Depend
     if body.reauth_required:
         db.commit(); return {"created": False, "notifications_sent": 0, "rotation_key": ""}
     snapshot, created = record_snapshot(db, device.user_id, body)
+    record_storefront_state(db, device.user_id, body)
     sent = await notify_matches(db, device.user_id, snapshot)
     device.last_successful_sync_at = datetime.now(timezone.utc); device.reauth_required = False; db.commit()
     return {"created": created, "notifications_sent": sent, "rotation_key": snapshot.rotation_key}

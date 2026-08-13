@@ -55,4 +55,4 @@ The script runs backend/companion tests, static checks, frontend lint/build, PyI
 
 ## Production configuration
 
-Backend variables are documented in `backend/.env.example`; the frontend uses `VITE_API_URL`. Desktop release endpoints are embedded at build time with `VALSHOP_API_BASE_URL`, `VALSHOP_PUBLIC_SITE_URL`, `VALSHOP_UPDATE_METADATA_URL`, and `VALSHOP_UPDATE_DOWNLOAD_URL`. See [releasing](docs/RELEASING.md) for exact steps.
+Backend variables are documented in `backend/.env.example`; the frontend uses `VITE_API_URL`. Desktop release endpoints are embedded at build time with `VALSHOP_API_BASE_URL`, `VALSHOP_PUBLIC_SITE_URL`, `VALSHOP_UPDATE_METADATA_URL`, and `VALSHOP_UPDATE_DOWNLOAD_URL`. The companion synchronizes Daily Shop, Bundles, Wallet and Night Market metadata; Riot credentials never leave the device. See [releasing](docs/RELEASING.md) for exact steps.

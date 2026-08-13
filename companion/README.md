@@ -1,6 +1,6 @@
 # VALSHOP Windows Companion
 
-The companion triggers a shop check after reset and uploads only resolved offer metadata. It never receives or stores Riot access tokens or passwords. Its dedicated device token is stored by `keyring` in Windows Credential Manager.
+The companion checks the storefront after reset and uploads only resolved shop metadata. Riot access tokens stay on the PC in Windows Credential Manager and are never uploaded; VALSHOP never receives or stores a Riot password. The dedicated cloud device token is also stored by `keyring` in Windows Credential Manager.
 
 ## Install and connect
 
@@ -18,7 +18,7 @@ In VALSHOP, open **Settings → Create device token**. Copy the token once, then
 .venv\Scripts\python app.py run
 ```
 
-The browser must have completed the normal Riot login. If that short-lived in-memory Riot session expires, the companion reports `reauth_required`; sign in through VALSHOP normally and it resumes on a later retry.
+Complete Riot sign-in in the companion, pair the device once through the website, and leave it running in the tray. Daily Shop, Bundles, Wallet and Night Market data are synchronized to the website. When Riot's short-lived session expires, the companion reports `reauth_required`; reconnect Riot locally and it resumes on the next retry.
 
 ## Windows startup
 

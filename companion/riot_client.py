@@ -24,10 +24,18 @@ def sync_payload(daily: dict) -> dict:
             {
                 "skin_uuid": offer["uuid"], "skin_name": offer["name"],
                 "display_icon": offer.get("display_icon", ""),
+                "content_tier_uuid": offer.get("content_tier_uuid", ""),
                 "content_tier_name": offer.get("content_tier_name", "Unknown"),
                 "content_tier_color": offer.get("content_tier_color", ""),
                 "vp_cost": offer["cost"],
             }
             for offer in daily.get("offers", [])
         ],
+        "bundles": daily.get("bundles", []),
+        "night_market": daily.get(
+            "night_market", {"active": False, "offers": [], "seconds_remaining": 0}
+        ),
+        "wallet": daily.get(
+            "wallet", {"valorant_points": 0, "radianite_points": 0}
+        ),
     }

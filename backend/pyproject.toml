@@ -1,6 +1,6 @@
 [project]
 name = "valorant-shop-checker-backend"
-version = "0.1.0"
+version = "1.0.0"
 description = "FastAPI backend for Valorant Shop Checker"
 requires-python = ">=3.12"
 dependencies = [

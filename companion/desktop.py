@@ -545,6 +545,9 @@ class MainWindow(QMainWindow):
                                     "skin_uuid": offer["uuid"],
                                     "skin_name": offer["name"],
                                     "display_icon": offer.get("display_icon", ""),
+                                    "content_tier_uuid": offer.get(
+                                        "content_tier_uuid", ""
+                                    ),
                                     "content_tier_name": offer.get(
                                         "content_tier_name", "Unknown"
                                     ),
@@ -555,6 +558,15 @@ class MainWindow(QMainWindow):
                                 }
                                 for offer in pending["offers"]
                             ],
+                            "bundles": pending.get("bundles", []),
+                            "night_market": pending.get(
+                                "night_market",
+                                {"active": False, "offers": [], "seconds_remaining": 0},
+                            ),
+                            "wallet": pending.get(
+                                "wallet",
+                                {"valorant_points": 0, "radianite_points": 0},
+                            ),
                         }
                         await cloud.sync(payload)
                         self.store.mark_uploaded(pending["rotation_key"])

@@ -3,11 +3,20 @@ import threading
 import time
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
+from app.database import get_db
 from app.models.auth import SessionData
+from app.models.persistence import User
 from app.services import riot_auth
+from app.services.cloud import (
+    create_web_session,
+    get_or_create_user,
+    resolve_web_session,
+    revoke_web_session,
+)
 from app.session_store import store
 
 logger = logging.getLogger(__name__)
@@ -67,7 +76,9 @@ async def get_login_url() -> AuthUrlResponse:
 
 
 @router.post("/token", response_model=LoginResponse)
-async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginResponse:
+async def submit_token(
+    body: TokenSubmitRequest, request: Request, db: Session = Depends(get_db)
+) -> LoginResponse:
     """Accept the pasted redirect URL, extract tokens, and create a session."""
     _check_rate_limit(request.client.host if request.client else "unknown")
 
@@ -88,6 +99,8 @@ async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginRespo
             region=region,
         )
         session_token = store.create(session_data)
+        user = get_or_create_user(db, puuid)
+        create_web_session(db, user.id, session_token)
 
         return LoginResponse(status="success", session_token=session_token, puuid=puuid)
 
@@ -107,21 +120,41 @@ async def submit_token(body: TokenSubmitRequest, request: Request) -> LoginRespo
 
 
 @router.post("/logout")
-async def logout(request: Request) -> dict:
+async def logout(request: Request, db: Session = Depends(get_db)) -> dict:
     token = _get_token_from_header(request)
     if token:
         store.delete(token)
+        revoke_web_session(db, token)
     return {"status": "ok"}
 
 
 @router.get("/session")
-async def check_session(request: Request) -> dict:
+async def check_session(request: Request, db: Session = Depends(get_db)) -> dict:
     token = _get_token_from_header(request)
     if not token:
         return {"valid": False}
 
     session = store.get_or_reauth(token)
-    if not session:
+    if session:
+        return {"valid": True, "puuid": session.puuid}
+
+    web_session = resolve_web_session(db, token)
+    user = db.get(User, web_session.user_id) if web_session else None
+    if not user:
         return {"valid": False}
 
-    return {"valid": True, "puuid": session.puuid}
+    return {"valid": True, "puuid": user.puuid}
+
+
+def authenticated_user(request: Request, db: Session = Depends(get_db)) -> User:
+    token = _get_token_from_header(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    riot_session = store.get_or_reauth(token)
+    if riot_session:
+        return get_or_create_user(db, riot_session.puuid)
+    web_session = resolve_web_session(db, token)
+    user = db.get(User, web_session.user_id) if web_session else None
+    if not user:
+        raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
+    return user

@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, HttpUrl
 
+from app.models.store import Bundle, NightMarketResponse, Wallet
+
 
 class SkinCatalogItem(BaseModel):
     uuid: str
@@ -30,6 +32,7 @@ class SnapshotOffer(BaseModel):
     skin_uuid: str = Field(min_length=1, max_length=64)
     skin_name: str = Field(min_length=1, max_length=160)
     display_icon: str = ""
+    content_tier_uuid: str = ""
     content_tier_name: str = "Unknown"
     content_tier_color: str = ""
     vp_cost: int = Field(ge=1)
@@ -39,6 +42,11 @@ class ShopSyncRequest(BaseModel):
     rotation_key: str | None = Field(default=None, max_length=40)
     seconds_remaining: int = Field(ge=0)
     offers: list[SnapshotOffer] = Field(max_length=10)
+    bundles: list[Bundle] = Field(default_factory=list, max_length=10)
+    night_market: NightMarketResponse = Field(
+        default_factory=lambda: NightMarketResponse(active=False, offers=[], seconds_remaining=0)
+    )
+    wallet: Wallet = Field(default_factory=lambda: Wallet(valorant_points=0, radianite_points=0))
     reauth_required: bool = False
 
 

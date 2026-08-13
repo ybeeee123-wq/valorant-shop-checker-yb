@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="Valorant Shop Checker API",
-    version="0.1.0",
+    version="1.0.0",
     lifespan=lifespan,
 )
 

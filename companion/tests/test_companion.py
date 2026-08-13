@@ -21,10 +21,18 @@ def test_retry_backoff_is_bounded() -> None:
 
 
 def test_cloud_sync_payload() -> None:
-    payload = sync_payload({"seconds_remaining": 90, "offers": [{"uuid": "skin", "name": "Skin", "cost": 875}]})
+    payload = sync_payload({
+        "seconds_remaining": 90,
+        "offers": [{"uuid": "skin", "name": "Skin", "cost": 875}],
+        "bundles": [{"uuid": "bundle"}],
+        "night_market": {"active": False, "offers": [], "seconds_remaining": 0},
+        "wallet": {"valorant_points": 100, "radianite_points": 20},
+    })
     assert payload["seconds_remaining"] == 90
     assert payload["offers"][0]["skin_uuid"] == "skin"
     assert payload["offers"][0]["vp_cost"] == 875
+    assert payload["bundles"][0]["uuid"] == "bundle"
+    assert payload["wallet"]["valorant_points"] == 100
 
 
 @pytest.mark.asyncio

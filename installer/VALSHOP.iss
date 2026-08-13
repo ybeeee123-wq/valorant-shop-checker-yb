@@ -1,5 +1,5 @@
 #define AppExe "..\dist\VALSHOP\VALSHOP.exe"
-#define MyAppVersion GetFileVersion(AppExe)
+#define MyAppVersion GetVersionNumbersString(AppExe)
 
 [Setup]
 AppId={{F8B2D89D-437E-4ED0-91CA-D680DF72E2E2}

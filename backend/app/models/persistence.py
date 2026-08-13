@@ -19,6 +19,29 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class WebSession(Base):
+    __tablename__ = "web_sessions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class StorefrontState(Base):
+    __tablename__ = "storefront_states"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    rotation_key: Mapped[str] = mapped_column(String(40))
+    seconds_remaining: Mapped[int] = mapped_column(Integer, default=0)
+    offers_json: Mapped[str] = mapped_column(Text, default="[]")
+    bundles_json: Mapped[str] = mapped_column(Text, default="[]")
+    night_market_json: Mapped[str] = mapped_column(Text, default='{"active":false,"offers":[],"seconds_remaining":0}')
+    wallet_json: Mapped[str] = mapped_column(Text, default='{"valorant_points":0,"radianite_points":0}')
+    synced_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class WishlistItem(Base):
     __tablename__ = "wishlist_items"
     __table_args__ = (UniqueConstraint("user_id", "skin_uuid"),)

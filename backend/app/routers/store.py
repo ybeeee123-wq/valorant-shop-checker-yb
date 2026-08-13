@@ -1,18 +1,53 @@
+import json
 import logging
+from datetime import datetime, timezone
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.database import get_db
 from app.models.auth import SessionData
-from app.models.store import BundleResponse, DailyStoreResponse, NightMarketResponse, Wallet
+from app.models.persistence import StorefrontState, User
+from app.models.store import (
+    BundleResponse,
+    DailyStoreResponse,
+    NightMarketResponse,
+    SkinOffer,
+    Wallet,
+)
+from app.routers.auth import authenticated_user
 from app.services import storefront
-from app.services.cloud import get_or_create_user, record_snapshot, sync_from_daily
+from app.services.cloud import record_snapshot, sync_from_daily
 from app.session_store import store
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _optional_riot_session(request: Request) -> SessionData | None:
+    auth = request.headers.get("Authorization", "")
+    token = auth[7:] if auth.startswith("Bearer ") else ""
+    return store.get_or_reauth(token) if token else None
+
+
+def _cloud_state(db: Session, user: User) -> StorefrontState:
+    state = db.get(StorefrontState, user.id)
+    if not state:
+        raise HTTPException(
+            status_code=409,
+            detail="No synced storefront yet. Open VALSHOP Companion and choose Sync Now.",
+        )
+    return state
+
+
+def _remaining(state: StorefrontState, value: int) -> int:
+    synced_at = state.synced_at
+    if synced_at.tzinfo is None:
+        synced_at = synced_at.replace(tzinfo=timezone.utc)
+    elapsed = int((datetime.now(timezone.utc) - synced_at).total_seconds())
+    return max(0, value - max(0, elapsed))
 
 
 async def get_session(request: Request) -> SessionData:
@@ -50,7 +85,28 @@ def _handle_riot_error(exc: Exception) -> HTTPException:
 
 
 @router.get("/daily", response_model=DailyStoreResponse)
-async def daily_store(session: SessionData = Depends(get_session)) -> DailyStoreResponse:
+async def daily_store(
+    request: Request,
+    user: User = Depends(authenticated_user),
+    db: Session = Depends(get_db),
+) -> DailyStoreResponse:
+    session = _optional_riot_session(request)
+    if not session:
+        state = _cloud_state(db, user)
+        offers = [
+            SkinOffer(
+                uuid=item["skin_uuid"], name=item["skin_name"],
+                display_icon=item.get("display_icon", ""),
+                content_tier_uuid=item.get("content_tier_uuid", ""),
+                content_tier_name=item.get("content_tier_name", "Unknown"),
+                content_tier_color=item.get("content_tier_color", ""),
+                cost=item["vp_cost"],
+            )
+            for item in json.loads(state.offers_json)
+        ]
+        return DailyStoreResponse(
+            offers=offers, seconds_remaining=_remaining(state, state.seconds_remaining)
+        )
     try:
         raw = await storefront.fetch_storefront(
             session.access_token, session.entitlements_token, session.puuid, session.shard
@@ -58,19 +114,28 @@ async def daily_store(session: SessionData = Depends(get_session)) -> DailyStore
     except (httpx.HTTPStatusError, httpx.RequestError) as exc:
         raise _handle_riot_error(exc)
     result = storefront.get_daily_store(raw)
-    db = SessionLocal()
     try:
-        user = get_or_create_user(db, session.puuid)
         record_snapshot(db, user.id, sync_from_daily(result.offers, result.seconds_remaining))
     except Exception:
         logger.exception("Could not persist daily shop snapshot")
-    finally:
-        db.close()
     return result
 
 
 @router.get("/bundle", response_model=BundleResponse)
-async def featured_bundle(session: SessionData = Depends(get_session)) -> BundleResponse:
+async def featured_bundle(
+    request: Request,
+    user: User = Depends(authenticated_user),
+    db: Session = Depends(get_db),
+) -> BundleResponse:
+    session = _optional_riot_session(request)
+    if not session:
+        state = _cloud_state(db, user)
+        bundles = json.loads(state.bundles_json)
+        for bundle in bundles:
+            bundle["duration_remaining_secs"] = _remaining(
+                state, int(bundle.get("duration_remaining_secs", 0))
+            )
+        return BundleResponse(bundles=bundles)
     try:
         raw = await storefront.fetch_storefront(
             session.access_token, session.entitlements_token, session.puuid, session.shard
@@ -81,7 +146,14 @@ async def featured_bundle(session: SessionData = Depends(get_session)) -> Bundle
 
 
 @router.get("/wallet", response_model=Wallet)
-async def wallet(session: SessionData = Depends(get_session)) -> Wallet:
+async def wallet(
+    request: Request,
+    user: User = Depends(authenticated_user),
+    db: Session = Depends(get_db),
+) -> Wallet:
+    session = _optional_riot_session(request)
+    if not session:
+        return Wallet.model_validate(json.loads(_cloud_state(db, user).wallet_json))
     try:
         return await storefront.get_wallet(
             session.access_token, session.entitlements_token, session.puuid, session.shard
@@ -91,7 +163,20 @@ async def wallet(session: SessionData = Depends(get_session)) -> Wallet:
 
 
 @router.get("/night-market", response_model=NightMarketResponse)
-async def night_market(session: SessionData = Depends(get_session)) -> NightMarketResponse:
+async def night_market(
+    request: Request,
+    user: User = Depends(authenticated_user),
+    db: Session = Depends(get_db),
+) -> NightMarketResponse:
+    session = _optional_riot_session(request)
+    if not session:
+        state = _cloud_state(db, user)
+        payload = json.loads(state.night_market_json)
+        payload["seconds_remaining"] = _remaining(
+            state, int(payload.get("seconds_remaining", 0))
+        )
+        payload["active"] = bool(payload.get("offers")) or payload["seconds_remaining"] > 0
+        return NightMarketResponse.model_validate(payload)
     try:
         raw = await storefront.fetch_storefront(
             session.access_token, session.entitlements_token, session.puuid, session.shard

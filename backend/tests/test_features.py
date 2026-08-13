@@ -24,7 +24,9 @@ from app.models.persistence import (
     CompanionPairingChallenge,
     NotificationEvent,
     NotificationPreference,
+    StorefrontState,
     User,
+    WebSession,
     WishlistItem,
 )
 from app.routers.cloud import (
@@ -38,8 +40,17 @@ from app.routers.cloud import (
     revoke_companion,
     revoke_current_companion,
 )
+from app.routers.store import daily_store, featured_bundle, night_market, wallet
 from app.services import asset_cache
-from app.services.cloud import notify_matches, record_snapshot, token_hash
+from app.services.cloud import (
+    create_web_session,
+    notify_matches,
+    record_snapshot,
+    record_storefront_state,
+    resolve_web_session,
+    revoke_web_session,
+    token_hash,
+)
 from app.services.storefront import get_night_market
 
 
@@ -73,6 +84,45 @@ def test_duplicate_rotation_is_deduplicated(db: Session, user: User) -> None:
     first, created = record_snapshot(db, user.id, sync)
     second, duplicate_created = record_snapshot(db, user.id, sync)
     assert created is True and duplicate_created is False and first.id == second.id
+
+
+def test_full_storefront_state_and_durable_web_session(db: Session, user: User) -> None:
+    sync = ShopSyncRequest(
+        rotation_key="rotation",
+        seconds_remaining=90,
+        offers=[SnapshotOffer(
+            skin_uuid="skin", skin_name="Skin", content_tier_uuid="tier", vp_cost=875
+        )],
+        bundles=[{
+            "uuid": "bundle", "name": "Bundle", "items": [],
+            "total_base_price": 1000, "total_discounted_price": 900,
+            "duration_remaining_secs": 3600,
+        }],
+        night_market={
+            "active": False, "offers": [], "seconds_remaining": 0,
+        },
+        wallet={"valorant_points": 100, "radianite_points": 20},
+    )
+    state = record_storefront_state(db, user.id, sync)
+    assert db.get(StorefrontState, user.id) is state
+    assert '"valorant_points": 100' in state.wallet_json
+    assert '"content_tier_uuid": "tier"' in state.offers_json
+
+    request = Request({
+        "type": "http", "method": "GET", "path": "/", "headers": [],
+        "client": ("127.0.0.1", 1234), "query_string": b"",
+        "server": ("test", 80), "scheme": "http",
+    })
+    assert asyncio.run(daily_store(request, user, db)).offers[0].uuid == "skin"
+    assert asyncio.run(featured_bundle(request, user, db)).bundles[0].uuid == "bundle"
+    assert asyncio.run(wallet(request, user, db)).valorant_points == 100
+    assert asyncio.run(night_market(request, user, db)).active is False
+
+    created = create_web_session(db, user.id, "web-token")
+    assert isinstance(created, WebSession)
+    assert resolve_web_session(db, "web-token") is not None
+    revoke_web_session(db, "web-token")
+    assert resolve_web_session(db, "web-token") is None
 
 
 def test_inactive_shop_is_safe() -> None:

@@ -20,7 +20,9 @@ from app.models.persistence import (
     PushSubscription,
     ShopSnapshot,
     ShopSnapshotItem,
+    StorefrontState,
     User,
+    WebSession,
     WishlistItem,
 )
 from app.models.store import SkinOffer
@@ -30,6 +32,38 @@ logger = logging.getLogger(__name__)
 
 def token_hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def create_web_session(db: Session, user_id: str, token: str, days: int = 30) -> WebSession:
+    session = WebSession(
+        user_id=user_id,
+        token_hash=token_hash(token),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=days),
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return session
+
+
+def resolve_web_session(db: Session, token: str) -> WebSession | None:
+    now = datetime.now(timezone.utc)
+    session = db.scalar(select(WebSession).where(
+        WebSession.token_hash == token_hash(token),
+        WebSession.revoked.is_(False),
+        WebSession.expires_at > now,
+    ))
+    if session:
+        session.last_seen_at = now
+        db.commit()
+    return session
+
+
+def revoke_web_session(db: Session, token: str) -> None:
+    session = db.scalar(select(WebSession).where(WebSession.token_hash == token_hash(token)))
+    if session:
+        session.revoked = True
+        db.commit()
 
 
 def secure_hash(value: str) -> str:
@@ -92,6 +126,24 @@ def record_snapshot(db: Session, user_id: str, sync: ShopSyncRequest) -> tuple[S
         raise
     db.refresh(snapshot)
     return snapshot, True
+
+
+def record_storefront_state(db: Session, user_id: str, sync: ShopSyncRequest) -> StorefrontState:
+    key = sync.rotation_key or rotation_key(sync.seconds_remaining)
+    state = db.get(StorefrontState, user_id)
+    if not state:
+        state = StorefrontState(user_id=user_id, rotation_key=key)
+        db.add(state)
+    state.rotation_key = key
+    state.seconds_remaining = sync.seconds_remaining
+    state.offers_json = json.dumps([offer.model_dump() for offer in sync.offers])
+    state.bundles_json = json.dumps([bundle.model_dump() for bundle in sync.bundles])
+    state.night_market_json = json.dumps(sync.night_market.model_dump())
+    state.wallet_json = json.dumps(sync.wallet.model_dump())
+    state.synced_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(state)
+    return state
 
 
 def validate_discord_webhook(url: str) -> None:
@@ -205,6 +257,7 @@ async def evaluate_latest_snapshot(db: Session, user_id: str) -> int:
 def sync_from_daily(offers: list[SkinOffer], seconds_remaining: int) -> ShopSyncRequest:
     return ShopSyncRequest(seconds_remaining=seconds_remaining, offers=[SnapshotOffer(
         skin_uuid=offer.uuid, skin_name=offer.name, display_icon=offer.display_icon,
+        content_tier_uuid=offer.content_tier_uuid,
         content_tier_name=offer.content_tier_name,
         content_tier_color=offer.content_tier_color, vp_cost=offer.cost,
     ) for offer in offers])
