@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as api from '../api/client';
 import type { CompanionStatus, HistorySnapshot, NotificationPreferences, SkinCatalogItem, SkinOffer, WishlistItem } from '../types';
-import { HeartIcon, HistoryIcon, VPIcon } from './Icons';
+import { HeartIcon, HistoryIcon, PlayIcon, VPIcon } from './Icons';
 import EmptyState from './EmptyState';
 import PageHeader from './PageHeader';
 import Reveal from './Reveal';
 
-export function WishlistView({ today }: { today: SkinOffer[] }) {
+export function WishlistView({ today, onPreview }: { today: SkinOffer[]; onPreview: (uuid: string, name: string, tierName: string, tierColor: string) => void }) {
   const [query, setQuery] = useState('');
   const [skins, setSkins] = useState<SkinCatalogItem[]>([]);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
@@ -70,7 +70,7 @@ export function WishlistView({ today }: { today: SkinOffer[] }) {
       {loading ? <CatalogSkeleton /> : skins.length === 0 ? <EmptyState icon={<HeartIcon className="h-7 w-7" />} label="No matching skins" title="Try another search" description="No collection items match that name." /> : <section className="catalog-grid" aria-label="Skin collection">
         {skins.map((skin, index) => (
           <Reveal key={skin.uuid} delay={Math.min(index * 25, 250)} className="h-full"><article className={`catalog-card ${todayIds.has(skin.uuid) ? 'is-match' : ''}`}>
-            <div className="catalog-art">{skin.display_icon ? <img src={skin.display_icon} alt={skin.name} loading="lazy" /> : <span>Artwork unavailable</span>}</div>
+            <div className="catalog-art">{skin.display_icon ? <img src={skin.display_icon} alt={skin.name} loading="lazy" decoding="async" /> : <span>Artwork unavailable</span>}<button type="button" className="preview-trigger" onClick={() => onPreview(skin.uuid, skin.name, skin.content_tier_name, skin.content_tier_color)} onPointerEnter={() => api.preloadSkinPreview(skin.uuid)} onFocus={() => api.preloadSkinPreview(skin.uuid)} aria-label={`Preview ${skin.name}`}><PlayIcon className="h-4 w-4" />Preview</button></div>
             <div className="catalog-copy"><span>{skin.content_tier_name} · {skin.weapon}</span><h2>{skin.name}</h2>{todayIds.has(skin.uuid) && <b>In your shop</b>}</div>
             <button type="button" className={wanted.has(skin.uuid) ? 'wishlist-button is-saved' : 'wishlist-button'} onClick={() => void toggle(skin)} disabled={pending.has(skin.uuid)} aria-pressed={wanted.has(skin.uuid)} aria-label={`${wanted.has(skin.uuid) ? 'Remove' : 'Add'} ${skin.name}`}><HeartIcon className="h-4 w-4" />{pending.has(skin.uuid) ? 'Updating' : wanted.has(skin.uuid) ? 'Saved' : 'Save'}</button>
           </article></Reveal>

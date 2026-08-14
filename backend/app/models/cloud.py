@@ -15,6 +15,24 @@ class SkinCatalogItem(BaseModel):
     content_tier_color: str
 
 
+class SkinPreviewVideo(BaseModel):
+    uuid: str
+    name: str
+    ordinal: int
+    streamed_video: str
+    display_icon: str = ""
+    swatch: str = ""
+    level_item: str = ""
+
+
+class SkinPreviewResponse(BaseModel):
+    skin_uuid: str
+    name: str
+    display_icon: str
+    levels: list[SkinPreviewVideo]
+    chromas: list[SkinPreviewVideo]
+
+
 class WishlistCreate(BaseModel):
     skin_uuid: str = Field(min_length=1, max_length=64)
 

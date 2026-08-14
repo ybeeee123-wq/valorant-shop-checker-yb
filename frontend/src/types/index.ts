@@ -76,6 +76,24 @@ export interface SkinCatalogItem {
   content_tier_uuid: string; content_tier_name: string; content_tier_color: string;
 }
 
+export interface SkinPreviewVideo {
+  uuid: string;
+  name: string;
+  ordinal: number;
+  streamed_video: string;
+  display_icon: string;
+  swatch: string;
+  level_item: string;
+}
+
+export interface SkinPreviewResponse {
+  skin_uuid: string;
+  name: string;
+  display_icon: string;
+  levels: SkinPreviewVideo[];
+  chromas: SkinPreviewVideo[];
+}
+
 export interface WishlistItem {
   skin_uuid: string; skin_name: string; display_icon: string;
   content_tier_name: string; content_tier_color: string; added_at: string;

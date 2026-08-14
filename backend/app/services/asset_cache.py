@@ -31,18 +31,21 @@ async def initialize() -> None:
     # Skins: index by skin UUID and build level -> skin reverse map
     for skin in skins_resp:
         uuid = skin["uuid"].lower()
+        chromas = skin.get("chromas") or []
+        levels = skin.get("levels") or []
         skin_entry = {
             "uuid": uuid,
             "displayName": skin.get("displayName", ""),
-            "displayIcon": skin.get("displayIcon") or skin.get("chromas", [{}])[0].get("fullRender", ""),
+            "displayIcon": skin.get("displayIcon") or (chromas[0].get("fullRender", "") if chromas else ""),
             "contentTierUuid": (skin.get("contentTierUuid") or "").lower(),
-            "levels": skin.get("levels", []),
+            "levels": levels,
+            "chromas": chromas,
             "weapon": skin.get("displayName", "").rsplit(" ", 1)[-1],
         }
         _skins[uuid] = skin_entry
 
         # Map each level UUID to the parent skin
-        for level in skin.get("levels", []):
+        for level in levels:
             level_uuid = level["uuid"].lower()
             _skin_levels_to_skin[level_uuid] = skin_entry
 
@@ -123,6 +126,38 @@ def get_client_version() -> str:
 
 def get_bundle_info(uuid: str) -> dict[str, Any] | None:
     return _bundles.get(uuid.lower())
+
+
+def get_skin_preview(uuid: str) -> dict[str, Any] | None:
+    """Return cached Riot-hosted preview videos for a skin or skin-level UUID."""
+    skin = get_skin(uuid)
+    if not skin:
+        return None
+
+    def videos(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for ordinal, item in enumerate(items, start=1):
+            video = item.get("streamedVideo") or ""
+            if not isinstance(video, str) or not video.startswith("https://"):
+                continue
+            result.append({
+                "uuid": str(item.get("uuid", "")).lower(),
+                "name": str(item.get("displayName", "")),
+                "ordinal": ordinal,
+                "streamed_video": video,
+                "display_icon": str(item.get("displayIcon") or ""),
+                "swatch": str(item.get("swatch") or ""),
+                "level_item": str(item.get("levelItem") or ""),
+            })
+        return result
+
+    return {
+        "skin_uuid": skin["uuid"],
+        "name": skin.get("displayName", "Unknown skin"),
+        "display_icon": skin.get("displayIcon", ""),
+        "levels": videos(skin.get("levels") or []),
+        "chromas": videos(skin.get("chromas") or []),
+    }
 
 
 def search_skins(query: str = "", weapon: str = "", limit: int = 100) -> list[dict[str, Any]]:

@@ -129,6 +129,25 @@ def test_inactive_shop_is_safe() -> None:
     assert get_night_market({}).model_dump() == {"active": False, "offers": [], "seconds_remaining": 0}
 
 
+def test_skin_preview_filters_missing_videos(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(asset_cache, "get_skin", lambda _: {
+        "uuid": "skin",
+        "displayName": "Kuronami Vandal",
+        "displayIcon": "icon",
+        "levels": [
+            {"uuid": "level-one", "displayName": "Level 1", "streamedVideo": "https://riot.example/video.mp4"},
+            {"uuid": "level-two", "displayName": "Level 2", "streamedVideo": None},
+        ],
+        "chromas": [
+            {"uuid": "red", "displayName": "Red", "streamedVideo": "https://riot.example/red.mp4", "swatch": "red.png"},
+        ],
+    })
+    preview = asset_cache.get_skin_preview("LEVEL-ONE")
+    assert preview is not None
+    assert [item["uuid"] for item in preview["levels"]] == ["level-one"]
+    assert preview["chromas"][0]["swatch"] == "red.png"
+
+
 def test_companion_auth_and_reauth_state(db: Session, user: User) -> None:
     device = CompanionDevice(user_id=user.id, device_name="PC", device_token_hash=token_hash("secret"))
     db.add(device); db.commit()

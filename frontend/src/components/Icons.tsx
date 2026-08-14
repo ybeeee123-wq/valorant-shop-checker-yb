@@ -60,6 +60,14 @@ export function AlertIcon(props: IconProps) {
   return <svg {...baseProps} {...props}><path d="M10.3 3.8 2.2 18a2 2 0 0 0 1.7 3h16.2a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg>;
 }
 
+export function PlayIcon(props: IconProps) {
+  return <svg {...baseProps} {...props}><path d="m8 5 11 7-11 7V5Z" /></svg>;
+}
+
+export function CloseIcon(props: IconProps) {
+  return <svg {...baseProps} {...props}><path d="m6 6 12 12M18 6 6 18" /></svg>;
+}
+
 export function VPIcon(props: IconProps) {
   return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}><path d="M3 5.5 10.1 19h3.8L21 5.5h-4.2L12 15 7.2 5.5H3Z" fill="currentColor" /></svg>;
 }

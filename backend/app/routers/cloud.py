@@ -25,6 +25,7 @@ from app.models.cloud import (
     PushSubscriptionRequest,
     ShopSyncRequest,
     SkinCatalogItem,
+    SkinPreviewResponse,
     SnapshotOffer,
     WishlistCreate,
     WishlistItemResponse,
@@ -96,6 +97,16 @@ def skins(
     limit: int = Query(default=100, ge=1, le=200), _: User = Depends(current_user),
 ) -> list[dict[str, Any]]:
     return asset_cache.search_skins(q, weapon, limit)
+
+
+@router.get("/skins/{skin_uuid}/preview", response_model=SkinPreviewResponse)
+def skin_preview(
+    skin_uuid: str, _: User = Depends(current_user)
+) -> dict[str, Any]:
+    preview = asset_cache.get_skin_preview(skin_uuid)
+    if not preview:
+        raise HTTPException(status_code=404, detail="Skin preview not found")
+    return preview
 
 
 @router.get("/wishlist", response_model=list[WishlistItemResponse])

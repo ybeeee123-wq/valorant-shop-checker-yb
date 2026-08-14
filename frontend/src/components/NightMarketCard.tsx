@@ -1,9 +1,10 @@
 import type { CSSProperties } from 'react';
 import type { NightMarketOffer } from '../types';
 import { getContentTierColor } from '../utils/contentTier';
-import { VPIcon } from './Icons';
+import { PlayIcon, VPIcon } from './Icons';
+import * as api from '../api/client';
 
-export default function NightMarketCard({ offer, index }: { offer: NightMarketOffer; index: number }) {
+export default function NightMarketCard({ offer, index, onPreview }: { offer: NightMarketOffer; index: number; onPreview: () => void }) {
   const tierColor = getContentTierColor(offer.content_tier_name, offer.content_tier_color);
 
   return (
@@ -12,11 +13,12 @@ export default function NightMarketCard({ offer, index }: { offer: NightMarketOf
         <span className="offer-number">0{index + 1}</span>
         <span className="night-market-discount">-{offer.discount_percent}%</span>
         {offer.display_icon ? (
-          <img src={offer.display_icon} alt={offer.name} loading="eager" />
+          <img src={offer.display_icon} alt={offer.name} loading="eager" decoding="async" fetchPriority={index < 2 ? 'high' : 'auto'} />
         ) : (
           <span className="image-fallback">Artwork unavailable</span>
         )}
         <span className="tier-bar" aria-hidden="true" />
+        <button type="button" className="preview-trigger" onClick={onPreview} onPointerEnter={() => api.preloadSkinPreview(offer.uuid)} onFocus={() => api.preloadSkinPreview(offer.uuid)} aria-label={`Preview ${offer.name}`}><PlayIcon className="h-4 w-4" />Preview</button>
       </div>
       <div className="night-market-details">
         <div className="skin-copy">

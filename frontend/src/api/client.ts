@@ -3,6 +3,7 @@ import type {
   DailyStoreResponse,
   NightMarketResponse,
   SkinCatalogItem,
+  SkinPreviewResponse,
   WishlistItem,
   HistorySnapshot,
   NotificationPreferences,
@@ -10,9 +11,12 @@ import type {
   SessionResponse,
   Wallet,
 } from '../types';
+import { STORE_CACHE_KEY } from '../utils/storeCache';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 const TOKEN_KEY = 'session_token';
+const previewCache = new Map<string, SkinPreviewResponse>();
+const previewRequests = new Map<string, Promise<SkinPreviewResponse>>();
 
 export class ApiError extends Error {
   readonly status: number;
@@ -34,10 +38,12 @@ export function getStoredToken(): string | null {
 
 export function storeToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token);
+  sessionStorage.removeItem(STORE_CACHE_KEY);
 }
 
 export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(STORE_CACHE_KEY);
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -107,6 +113,27 @@ export function getNightMarket(): Promise<NightMarketResponse> {
 
 export function getSkins(q = '', weapon = '', signal?: AbortSignal): Promise<SkinCatalogItem[]> {
   return request(`/api/skins?q=${encodeURIComponent(q)}&weapon=${encodeURIComponent(weapon)}&limit=100`, { signal });
+}
+
+export function getSkinPreview(skinUuid: string): Promise<SkinPreviewResponse> {
+  const key = skinUuid.toLowerCase();
+  const cached = previewCache.get(key);
+  if (cached) return Promise.resolve(cached);
+  const pending = previewRequests.get(key);
+  if (pending) return pending;
+  const requestPromise = request<SkinPreviewResponse>(`/api/skins/${encodeURIComponent(key)}/preview`)
+    .then((preview) => {
+      previewCache.set(key, preview);
+      previewCache.set(preview.skin_uuid.toLowerCase(), preview);
+      return preview;
+    })
+    .finally(() => previewRequests.delete(key));
+  previewRequests.set(key, requestPromise);
+  return requestPromise;
+}
+
+export function preloadSkinPreview(skinUuid: string): void {
+  void getSkinPreview(skinUuid).catch(() => undefined);
 }
 
 export function getWishlist(): Promise<WishlistItem[]> { return request('/api/wishlist'); }

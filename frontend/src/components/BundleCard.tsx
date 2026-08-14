@@ -35,7 +35,7 @@ export default function BundleCard({ bundle }: { bundle: Bundle }) {
           </div>
         </div>
         <div className="bundle-art">
-          {bundle.display_icon ? <img src={bundle.display_icon} alt={bundle.name} /> : <span>Collection artwork unavailable</span>}
+          {bundle.display_icon ? <img src={bundle.display_icon} alt={bundle.name} decoding="async" fetchPriority="high" /> : <span>Collection artwork unavailable</span>}
         </div>
       </div>
 
@@ -45,7 +45,7 @@ export default function BundleCard({ bundle }: { bundle: Bundle }) {
           {bundle.items.map((item, index) => (
             <div key={item.uuid} className="bundle-item group" style={{ '--item-index': index } as CSSProperties}>
               <div className="bundle-item-art">
-                {item.display_icon ? <img src={item.display_icon} alt={item.name} /> : <span>No artwork</span>}
+                {item.display_icon ? <img src={item.display_icon} alt={item.name} loading="lazy" decoding="async" /> : <span>No artwork</span>}
               </div>
               <div className="bundle-item-copy">
                 <p>{item.name}</p>
