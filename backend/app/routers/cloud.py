@@ -27,6 +27,7 @@ from app.models.cloud import (
     SkinCatalogItem,
     SkinPreviewResponse,
     SnapshotOffer,
+    UserNotificationResponse,
     WishlistCreate,
     WishlistItemResponse,
 )
@@ -36,6 +37,7 @@ from app.models.persistence import (
     PushSubscription,
     ShopSnapshot,
     User,
+    UserNotification,
     WishlistItem,
 )
 from app.routers.auth import authenticated_user
@@ -44,15 +46,18 @@ from app.services.cloud import (
     decrypt_secret,
     encrypt_secret,
     evaluate_latest_snapshot,
+    get_notification_contact,
     get_preferences,
     notify_matches,
     record_snapshot,
     record_storefront_state,
     secure_hash,
     send_discord,
+    send_email,
     send_web_push,
     token_hash,
     validate_discord_webhook,
+    validate_email_address,
 )
 from app.session_store import store as session_store
 
@@ -155,9 +160,12 @@ def history(user: User = Depends(current_user), db: Session = Depends(get_db)) -
 @router.get("/notifications/preferences", response_model=NotificationPreferencesResponse)
 def notification_preferences(user: User = Depends(current_user), db: Session = Depends(get_db)) -> NotificationPreferencesResponse:
     prefs = get_preferences(db, user.id)
+    contact = get_notification_contact(db, user.id)
     return NotificationPreferencesResponse(
         web_push_enabled=prefs.web_push_enabled, discord_enabled=prefs.discord_enabled,
         discord_configured=bool(prefs.discord_webhook_encrypted),
+        email_enabled=contact.email_enabled,
+        email_configured=bool(contact.email_encrypted),
         notify_only_wishlist_matches=prefs.notify_only_wishlist_matches,
     )
 
@@ -173,8 +181,18 @@ def update_notification_preferences(body: NotificationPreferencesUpdate, user: U
         prefs.discord_webhook_encrypted = None
     if body.discord_enabled and not prefs.discord_webhook_encrypted:
         raise HTTPException(status_code=400, detail="Configure a Discord webhook before enabling Discord")
+    contact = get_notification_contact(db, user.id)
+    if body.email_address:
+        contact.email_encrypted = encrypt_secret(validate_email_address(body.email_address))
+    if body.remove_email:
+        contact.email_encrypted = None
+    if body.email_enabled and not contact.email_encrypted:
+        raise HTTPException(status_code=400, detail="Configure an email address before enabling email")
+    if body.email_enabled and not settings.RESEND_API_KEY:
+        raise HTTPException(status_code=503, detail="Email delivery is not configured yet")
     prefs.web_push_enabled = body.web_push_enabled
     prefs.discord_enabled = body.discord_enabled
+    contact.email_enabled = body.email_enabled
     prefs.notify_only_wishlist_matches = body.notify_only_wishlist_matches
     db.commit()
     return notification_preferences(user, db)
@@ -207,14 +225,62 @@ async def test_notification(body: NotificationTestRequest, user: User = Depends(
     try:
         if body.channel == "web_push":
             await send_web_push(db, user.id, "VALSHOP test", "Wishlist notifications are ready.")
-        else:
+        elif body.channel == "discord":
             prefs = get_preferences(db, user.id)
             if not prefs.discord_webhook_encrypted:
                 raise ValueError("Discord webhook is not configured")
             await send_discord(decrypt_secret(prefs.discord_webhook_encrypted), "VALSHOP test — Discord notifications are ready.")
+        else:
+            contact = get_notification_contact(db, user.id)
+            if not contact.email_encrypted:
+                raise ValueError("Email address is not configured")
+            await send_email(
+                decrypt_secret(contact.email_encrypted), "VALSHOP test",
+                "Email wishlist notifications are ready.", "", "/settings",
+            )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return {"status": "sent"}
+
+
+@router.get("/notifications", response_model=list[UserNotificationResponse])
+def notifications(
+    user: User = Depends(current_user), db: Session = Depends(get_db),
+) -> list[UserNotification]:
+    return list(db.scalars(
+        select(UserNotification)
+        .where(UserNotification.user_id == user.id)
+        .order_by(UserNotification.created_at.desc())
+        .limit(50)
+    ).all())
+
+
+@router.post("/notifications/{notification_id}/read", status_code=204)
+def read_notification(
+    notification_id: str, user: User = Depends(current_user), db: Session = Depends(get_db),
+) -> None:
+    notification = db.scalar(select(UserNotification).where(
+        UserNotification.id == notification_id,
+        UserNotification.user_id == user.id,
+    ))
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    notification.read_at = datetime.now(timezone.utc)
+    db.commit()
+
+
+@router.post("/notifications/read-all", status_code=204)
+def read_all_notifications(
+    user: User = Depends(current_user), db: Session = Depends(get_db),
+) -> None:
+    items = db.scalars(select(UserNotification).where(
+        UserNotification.user_id == user.id,
+        UserNotification.read_at.is_(None),
+    )).all()
+    now = datetime.now(timezone.utc)
+    for item in items:
+        item.read_at = now
+    db.commit()
 
 
 @router.post("/companion/pairing/start", response_model=PairingStatusResponse)

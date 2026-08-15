@@ -110,7 +110,14 @@ export interface HistorySnapshot {
 
 export interface NotificationPreferences {
   web_push_enabled: boolean; discord_enabled: boolean;
-  discord_configured: boolean; notify_only_wishlist_matches: boolean;
+  discord_configured: boolean; email_enabled: boolean; email_configured: boolean;
+  notify_only_wishlist_matches: boolean;
+}
+
+export interface UserNotification {
+  id: string; skin_uuid: string; title: string; body: string;
+  display_icon: string; vp_cost: number; target_url: string;
+  created_at: string; read_at: string | null;
 }
 
 export interface CompanionStatus {

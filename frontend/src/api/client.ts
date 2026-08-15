@@ -7,6 +7,7 @@ import type {
   WishlistItem,
   HistorySnapshot,
   NotificationPreferences,
+  UserNotification,
   CompanionStatus,
   SessionResponse,
   Wallet,
@@ -158,8 +159,15 @@ export function subscribePush(subscription: PushSubscriptionJSON): Promise<void>
 export function unsubscribePush(endpoint: string): Promise<void> {
   return request('/api/notifications/push/subscribe', { method: 'DELETE', body: JSON.stringify({ endpoint }) });
 }
-export function testNotification(channel: 'web_push' | 'discord'): Promise<{ status: string }> {
+export function testNotification(channel: 'web_push' | 'discord' | 'email'): Promise<{ status: string }> {
   return request('/api/notifications/test', { method: 'POST', body: JSON.stringify({ channel }) });
+}
+export function getNotifications(): Promise<UserNotification[]> { return request('/api/notifications'); }
+export function readNotification(id: string): Promise<void> {
+  return request(`/api/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' });
+}
+export function readAllNotifications(): Promise<void> {
+  return request('/api/notifications/read-all', { method: 'POST' });
 }
 export function getCompanionStatus(): Promise<CompanionStatus> { return request('/api/companion/status'); }
 export function revokeCompanion(): Promise<void> { return request('/api/companion/device', { method: 'DELETE' }); }

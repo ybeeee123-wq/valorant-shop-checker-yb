@@ -80,6 +80,9 @@ class NotificationPreferencesUpdate(BaseModel):
     discord_enabled: bool
     discord_webhook_url: HttpUrl | None = None
     remove_discord_webhook: bool = False
+    email_enabled: bool = False
+    email_address: str | None = Field(default=None, max_length=254)
+    remove_email: bool = False
     notify_only_wishlist_matches: bool = True
 
 
@@ -87,7 +90,21 @@ class NotificationPreferencesResponse(BaseModel):
     web_push_enabled: bool
     discord_enabled: bool
     discord_configured: bool
+    email_enabled: bool
+    email_configured: bool
     notify_only_wishlist_matches: bool
+
+
+class UserNotificationResponse(BaseModel):
+    id: str
+    skin_uuid: str
+    title: str
+    body: str
+    display_icon: str
+    vp_cost: int
+    target_url: str
+    created_at: datetime
+    read_at: datetime | None
 
 
 class PushSubscriptionRequest(BaseModel):
@@ -101,7 +118,7 @@ class PushSubscriptionDelete(BaseModel):
 
 
 class NotificationTestRequest(BaseModel):
-    channel: str = Field(pattern="^(web_push|discord)$")
+    channel: str = Field(pattern="^(web_push|discord|email)$")
 
 
 class CompanionHeartbeat(BaseModel):

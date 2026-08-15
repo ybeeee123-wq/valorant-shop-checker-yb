@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     VAPID_PUBLIC_KEY: str = ""
     VAPID_PRIVATE_KEY: str = ""
     VAPID_SUBJECT: str = "mailto:admin@example.com"
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = "VALSHOP <notifications@example.com>"
 
     @property
     def allowed_origins_list(self) -> list[str]:

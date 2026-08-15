@@ -127,6 +127,30 @@ class NotificationEvent(Base):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class UserNotification(Base):
+    __tablename__ = "user_notifications"
+    __table_args__ = (UniqueConstraint("user_id", "skin_uuid", "rotation_key"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    skin_uuid: Mapped[str] = mapped_column(String(64))
+    rotation_key: Mapped[str] = mapped_column(String(40))
+    title: Mapped[str] = mapped_column(String(180))
+    body: Mapped[str] = mapped_column(Text)
+    display_icon: Mapped[str] = mapped_column(Text, default="")
+    vp_cost: Mapped[int] = mapped_column(Integer)
+    target_url: Mapped[str] = mapped_column(String(240), default="/shop")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class NotificationContact(Base):
+    __tablename__ = "notification_contacts"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    email_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    email_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class CompanionPairingChallenge(Base):
     __tablename__ = "companion_pairing_challenges"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))

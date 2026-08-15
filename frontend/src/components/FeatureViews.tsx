@@ -6,6 +6,11 @@ import EmptyState from './EmptyState';
 import PageHeader from './PageHeader';
 import Reveal from './Reveal';
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 export function WishlistView({ today, onPreview }: { today: SkinOffer[]; onPreview: (uuid: string, name: string, tierName: string, tierColor: string) => void }) {
   const [query, setQuery] = useState('');
   const [skins, setSkins] = useState<SkinCatalogItem[]>([]);
@@ -118,6 +123,8 @@ export function SettingsView() {
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
   const [status, setStatus] = useState<CompanionStatus | null>(null);
   const [webhook, setWebhook] = useState('');
+  const [email, setEmail] = useState('');
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -130,6 +137,14 @@ export function SettingsView() {
       })
       .catch((e: Error) => { if (active) setMessage(e.message); });
     return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    const capturePrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', capturePrompt);
+    return () => window.removeEventListener('beforeinstallprompt', capturePrompt);
   }, []);
 
   async function runAction(action: () => Promise<void>) {
@@ -148,8 +163,15 @@ export function SettingsView() {
   async function save(overrides: Partial<NotificationPreferences> = {}) {
     if (!prefs) return;
     const next = { ...prefs, ...overrides };
-    const updated = await api.updateNotificationPreferences({ web_push_enabled: next.web_push_enabled, discord_enabled: next.discord_enabled, discord_webhook_url: webhook || null, notify_only_wishlist_matches: true });
-    setPrefs(updated); setWebhook(''); setMessage('Preferences saved.');
+    const updated = await api.updateNotificationPreferences({
+      web_push_enabled: next.web_push_enabled,
+      discord_enabled: next.discord_enabled,
+      discord_webhook_url: webhook || null,
+      email_enabled: next.email_enabled,
+      email_address: email || null,
+      notify_only_wishlist_matches: true,
+    });
+    setPrefs(updated); setWebhook(''); setEmail(''); setMessage('Preferences saved.');
   }
 
   async function enablePush() {
@@ -177,9 +199,19 @@ export function SettingsView() {
     if (!prefs) return;
     const updated = await api.updateNotificationPreferences({
       web_push_enabled: prefs.web_push_enabled, discord_enabled: false,
+      email_enabled: prefs.email_enabled,
       remove_discord_webhook: true, notify_only_wishlist_matches: true,
     });
     setPrefs(updated); setMessage('Discord webhook removed.');
+  }
+
+  async function removeEmail() {
+    if (!prefs) return;
+    const updated = await api.updateNotificationPreferences({
+      web_push_enabled: prefs.web_push_enabled, discord_enabled: prefs.discord_enabled,
+      email_enabled: false, remove_email: true, notify_only_wishlist_matches: true,
+    });
+    setPrefs(updated); setEmail(''); setMessage('Email notifications removed.');
   }
 
   async function revokeCompanion() {
@@ -188,9 +220,19 @@ export function SettingsView() {
     setMessage('All companion access revoked.');
   }
 
-  async function sendTest(channel: 'web_push' | 'discord') {
+  async function sendTest(channel: 'web_push' | 'discord' | 'email') {
     await api.testNotification(channel);
-    setMessage(channel === 'web_push' ? 'Test push sent.' : 'Discord test sent.');
+    setMessage(channel === 'web_push' ? 'Test push sent.' : channel === 'discord' ? 'Discord test sent.' : 'Test email sent.');
+  }
+
+  async function installWebsite() {
+    if (!installPrompt) {
+      setMessage('Use your browser menu and choose Install app. On iPhone, choose Share, then Add to Home Screen.');
+      return;
+    }
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    if (choice.outcome === 'accepted') setInstallPrompt(null);
   }
 
   return (
@@ -200,6 +242,8 @@ export function SettingsView() {
       <div className="settings-grid">
         <section className="settings-card"><span>Web Push</span><h2>Browser notifications</h2><p>Works when the site is closed, provided your browser allows background notifications.</p><div className="settings-actions"><button className="secondary-button" type="button" disabled={!prefs || busy} onClick={() => void runAction(enablePush)}>{busy ? 'Working' : prefs?.web_push_enabled ? 'Refresh subscription' : 'Enable Web Push'}</button>{prefs?.web_push_enabled && <button className="text-button" type="button" disabled={busy} onClick={() => void runAction(disablePush)}>Disable</button>}<button className="text-button" type="button" disabled={!prefs?.web_push_enabled || busy} onClick={() => void runAction(() => sendTest('web_push'))}>Send test</button></div></section>
         <section className="settings-card"><span>Discord</span><h2>Private webhook</h2><p>The webhook is encrypted before storage and is never returned to the browser.</p><label className="sr-only" htmlFor="discord-webhook">Discord webhook URL</label><input id="discord-webhook" className="feature-input" type="url" value={webhook} onChange={(e) => setWebhook(e.target.value)} placeholder={prefs?.discord_configured ? 'Webhook configured — paste to replace' : 'https://discord.com/api/webhooks/...'} autoComplete="off" /><div className="settings-actions"><button className="secondary-button" type="button" disabled={!prefs || !webhook.trim() || busy} onClick={() => void runAction(() => save({ discord_enabled: true }))}>Save & enable</button>{prefs?.discord_configured && <button className="text-button" type="button" disabled={busy} onClick={() => void runAction(removeDiscord)}>Remove</button>}<button className="text-button" type="button" disabled={!prefs?.discord_configured || busy} onClick={() => void runAction(() => sendTest('discord'))}>Send test</button></div></section>
+        <section className="settings-card"><span>Email</span><h2>Inbox delivery</h2><p>Receive a branded wishlist alert even when browser notifications are unavailable.</p><label className="sr-only" htmlFor="notification-email">Notification email</label><input id="notification-email" className="feature-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={prefs?.email_configured ? 'Email configured — enter to replace' : 'you@example.com'} autoComplete="email" /><div className="settings-actions"><button className="secondary-button" type="button" disabled={!prefs || !email.trim() || busy} onClick={() => void runAction(() => save({ email_enabled: true }))}>Save & enable</button>{prefs?.email_configured && <button className="text-button" type="button" disabled={busy} onClick={() => void runAction(removeEmail)}>Remove</button>}<button className="text-button" type="button" disabled={!prefs?.email_configured || busy} onClick={() => void runAction(() => sendTest('email'))}>Send test</button></div></section>
+        <section className="settings-card"><span>Installable website</span><h2>VALSHOP on your device</h2><p>Install the website for an app icon, standalone window, notification badges, and mobile Web Push.</p><div className="settings-actions"><button className="secondary-button" type="button" onClick={() => void installWebsite()}>Install website app</button></div></section>
         <section className="settings-card companion-card"><span>Windows companion</span><h2>{status === null ? 'Checking connection' : status.online ? 'Online' : status.registered ? 'Currently offline' : 'Not connected'}</h2><p>{status?.reauth_required ? 'Riot authentication is required again.' : status?.last_successful_sync_at ? `Last synced ${new Date(status.last_successful_sync_at).toLocaleString()}.` : 'Open the installed VALSHOP app and choose Connect cloud account. Pairing never asks you to copy a token.'}</p>{status?.registered && <button className="text-button" type="button" disabled={busy} onClick={() => void runAction(revokeCompanion)}>Revoke all companion devices</button>}</section>
       </div>
     </>

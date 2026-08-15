@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "VALSHOP — VALORANT Shop Companion",
+  "short_name": "VALSHOP",
+  "description": "Check your VALORANT shop and receive wishlist alerts.",
+  "start_url": "/shop",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f4f0",
+  "theme_color": "#f4f4f0",
+  "categories": ["games", "utilities"],
+  "icons": [
+    {
+      "src": "/valshop-mark-v3.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -123,6 +123,12 @@ export default function ShopPage() {
     document.title = `${title} — VALSHOP`;
   }, [location.pathname, view]);
 
+  useEffect(() => {
+    if (view !== 'shop' || !location.hash || offers.length === 0) return;
+    const target = document.getElementById(location.hash.slice(1));
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [location.hash, offers, view]);
+
   async function handleLogout() {
     await api.logout().catch(() => undefined);
     dispatch({ type: 'LOGOUT' });
@@ -132,7 +138,7 @@ export default function ShopPage() {
   if (!view) return <Navigate to="/shop" replace />;
 
   return (
-    <AppShell wallet={wallet} puuid={state.puuid} onLogout={handleLogout}>
+    <AppShell wallet={wallet} puuid={state.puuid} offers={offers} onLogout={handleLogout}>
       <div key={view} className="page-transition">
         {view === 'shop' && (
           <StoreView offers={offers} secondsRemaining={secondsRemaining} loading={loading} refreshing={refreshing} error={error} onRefresh={() => void fetchStoreData(true)} onPreview={openPreview} />

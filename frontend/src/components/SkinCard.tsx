@@ -8,7 +8,7 @@ export default function SkinCard({ skin, index = 0, onPreview }: { skin: SkinOff
   const tierColor = getContentTierColor(skin.content_tier_name, skin.content_tier_color);
 
   return (
-    <article className="skin-card group" style={{ '--tier-color': tierColor, '--card-index': index } as CSSProperties}>
+    <article id={`skin-${skin.uuid}`} className="skin-card group" style={{ '--tier-color': tierColor, '--card-index': index } as CSSProperties}>
       <div className="skin-media">
         <span className="offer-number">0{index + 1}</span>
         {skin.display_icon ? (

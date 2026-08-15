@@ -12,6 +12,7 @@ from app.config import settings
 from app.database import Base
 from app.models.cloud import (
     CompanionHeartbeat,
+    NotificationPreferencesUpdate,
     PairingApproveRequest,
     PairingPollRequest,
     PairingStartRequest,
@@ -22,10 +23,12 @@ from app.models.cloud import (
 from app.models.persistence import (
     CompanionDevice,
     CompanionPairingChallenge,
+    NotificationContact,
     NotificationEvent,
     NotificationPreference,
     StorefrontState,
     User,
+    UserNotification,
     WebSession,
     WishlistItem,
 )
@@ -33,12 +36,17 @@ from app.routers.cloud import (
     add_wishlist,
     companion_device,
     heartbeat,
+    notification_preferences,
+    notifications,
     pairing_approve,
     pairing_poll,
     pairing_start,
+    read_all_notifications,
+    read_notification,
     remove_wishlist,
     revoke_companion,
     revoke_current_companion,
+    update_notification_preferences,
 )
 from app.routers.store import daily_store, featured_bundle, night_market, wallet
 from app.services import asset_cache
@@ -169,6 +177,8 @@ def test_match_and_duplicate_notification_prevention(db: Session, user: User, mo
     assert asyncio.run(notify_matches(db, user.id, snapshot)) == 1
     assert asyncio.run(notify_matches(db, user.id, snapshot)) == 0
     assert len(db.scalars(select(NotificationEvent)).all()) == 1
+    inbox = db.scalars(select(UserNotification)).all()
+    assert len(inbox) == 1 and inbox[0].skin_uuid == "skin" and inbox[0].vp_cost == 875
 
 
 def test_existing_snapshot_new_wishlist_match_and_next_rotation(
@@ -192,6 +202,44 @@ def test_nonmatching_wishlist_does_not_notify(db: Session, user: User) -> None:
     db.add(WishlistItem(user_id=user.id, skin_uuid="other", skin_name="Other")); db.commit()
     snapshot, _ = record_snapshot(db, user.id, ShopSyncRequest(rotation_key="today", seconds_remaining=10, offers=[SnapshotOffer(skin_uuid="skin", skin_name="Skin", vp_cost=875)]))
     assert asyncio.run(notify_matches(db, user.id, snapshot)) == 0
+
+
+def test_notification_inbox_is_scoped_and_markable(db: Session, user: User) -> None:
+    other = User(puuid="other-player")
+    db.add(other); db.commit(); db.refresh(other)
+    own = UserNotification(
+        user_id=user.id, skin_uuid="skin", rotation_key="today", title="Match",
+        body="Skin is available", vp_cost=875,
+    )
+    foreign = UserNotification(
+        user_id=other.id, skin_uuid="other", rotation_key="today", title="Other",
+        body="Other is available", vp_cost=875,
+    )
+    db.add_all([own, foreign]); db.commit(); db.refresh(own); db.refresh(foreign)
+    assert [item.id for item in notifications(user, db)] == [own.id]
+    with pytest.raises(HTTPException) as denied:
+        read_notification(foreign.id, user, db)
+    assert denied.value.status_code == 404
+    read_notification(own.id, user, db)
+    assert own.read_at is not None
+    own.read_at = None; db.commit()
+    read_all_notifications(user, db)
+    assert own.read_at is not None and foreign.read_at is None
+
+
+def test_email_notification_preferences_are_encrypted(
+    db: Session, user: User, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "ENCRYPTION_KEY", Fernet.generate_key().decode())
+    monkeypatch.setattr(settings, "RESEND_API_KEY", "test-key")
+    updated = update_notification_preferences(NotificationPreferencesUpdate(
+        web_push_enabled=False, discord_enabled=False,
+        email_enabled=True, email_address="Player@Example.com",
+    ), user, db)
+    assert updated.email_enabled and updated.email_configured
+    contact = db.get(NotificationContact, user.id)
+    assert contact and contact.email_encrypted and "player@example.com" not in contact.email_encrypted
+    assert notification_preferences(user, db).email_configured
 
 
 def _request() -> Request:

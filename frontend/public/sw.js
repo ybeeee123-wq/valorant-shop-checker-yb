@@ -9,7 +9,10 @@ self.addEventListener('push', (event) => {
     body: data.body || 'A wishlist skin is available.',
     icon: '/favicon-v3.png',
     badge: '/favicon-v3.png',
+    image: data.image || undefined,
     tag: data.tag || 'valshop-wishlist',
+    renotify: true,
+    actions: [{ action: 'open-shop', title: 'Open shop' }],
     data: { url: data.url || '/shop' },
   }));
 });

@@ -18,7 +18,7 @@ from app.models.store import (
 )
 from app.routers.auth import authenticated_user
 from app.services import storefront
-from app.services.cloud import record_snapshot, sync_from_daily
+from app.services.cloud import notify_matches, record_snapshot, sync_from_daily
 from app.session_store import store
 
 logger = logging.getLogger(__name__)
@@ -115,7 +115,10 @@ async def daily_store(
         raise _handle_riot_error(exc)
     result = storefront.get_daily_store(raw)
     try:
-        record_snapshot(db, user.id, sync_from_daily(result.offers, result.seconds_remaining))
+        snapshot, _ = record_snapshot(
+            db, user.id, sync_from_daily(result.offers, result.seconds_remaining)
+        )
+        await notify_matches(db, user.id, snapshot)
     except Exception:
         logger.exception("Could not persist daily shop snapshot")
     return result
