@@ -365,6 +365,13 @@ a { color: inherit; text-decoration: none; }
 .login-intro { max-width: 510px; margin: 26px 0 0; color: var(--muted); font-size: 13px; line-height: 1.8; animation: intro-up 800ms var(--ease-out) 220ms both; }
 .login-action-block { max-width: 480px; margin-top: 38px; animation: intro-up 800ms var(--ease-out) 300ms both; }
 .login-button { width: 100%; min-height: 52px; justify-content: space-between; padding: 0 20px; }
+.installer-button { display: grid; width: 100%; min-height: 72px; margin-top: 10px; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; border: 1px solid var(--line-strong); padding: 12px 16px; background: var(--surface); color: var(--ink); transition: border-color 220ms ease,background-color 220ms ease,transform 220ms var(--ease-out),box-shadow 220ms ease; }
+.installer-button:hover { border-color: var(--ink); background: var(--item-bg); transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15,17,15,.07); }
+.installer-button>svg { color: var(--accent); }
+.installer-button>span { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.installer-button strong { font-size: 11px; font-weight: 750; }
+.installer-button small { color: var(--muted); font-size: 9px; line-height: 1.4; }
+.installer-button .installer-meta { color: var(--faint); font-family: "DM Mono",monospace; font-size: 8px; text-align: right; text-transform: uppercase; letter-spacing: .07em; }
 .button-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 .security-note { display: flex; margin-top: 18px; align-items: flex-start; gap: 12px; color: var(--muted); }
 .security-note svg { flex: none; margin-top: 2px; color: #357c5b; }
@@ -382,17 +389,19 @@ a { color: inherit; text-decoration: none; }
 .text-button { margin-top: 14px; border: 0; background: transparent; color: var(--muted); font-size: 10px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
 .text-button:hover { color: var(--ink); }
 
-.login-preview { display: flex; flex-direction: column; justify-content: space-between; border-left: 1px solid var(--line); background: var(--surface-muted); padding: 38px; animation: preview-in 900ms var(--ease-out) 180ms both; }
+.login-preview { display: flex; flex-direction: column; justify-content: space-between; border-left: 1px solid var(--line); background: var(--surface-muted); padding: clamp(32px,4vw,54px); animation: preview-in 900ms var(--ease-out) 180ms both; }
 .preview-topline { display: flex; justify-content: space-between; color: var(--faint); font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .14em; }
 .preview-topline span:last-child { color: #327a57; }
-.preview-stat { display: flex; margin-top: auto; align-items: flex-end; gap: 16px; }
-.preview-stat strong { font-family: "DM Mono",monospace; font-size: clamp(4.5rem,8vw,8.5rem); font-weight: 400; line-height: .8; letter-spacing: -.08em; }
-.preview-stat span { padding-bottom: 4px; color: var(--muted); font-size: 10px; line-height: 1.5; }
-.preview-rule { height: 1px; margin: 34px 0 10px; background: var(--line-strong); transform: scaleX(0); transform-origin: left; animation: rule-grow 900ms var(--ease-out) 550ms forwards; }
-.login-preview ul { margin: 0; padding: 0; list-style: none; }
-.login-preview li { display: flex; justify-content: space-between; border-bottom: 1px solid var(--line-strong); padding: 13px 0; font-size: 10px; }
-.login-preview li i { color: var(--faint); font-family: "DM Mono",monospace; font-size: 8px; font-style: normal; text-transform: uppercase; }
-.login-preview>p { margin: 34px 0 0; color: var(--muted); font-size: 10px; line-height: 1.7; }
+.onboarding-steps { display: grid; margin: auto 0; padding: 48px 0; list-style: none; }
+.onboarding-steps li { display: grid; grid-template-columns: 42px 1fr; gap: 18px; border-bottom: 1px solid var(--line-strong); padding: 24px 0; }
+.onboarding-steps li:first-child { border-top: 1px solid var(--line-strong); }
+.onboarding-steps i { padding-top: 2px; color: var(--accent); font-family: "DM Mono",monospace; font-size: 9px; font-style: normal; }
+.onboarding-steps strong { font-size: 13px; font-weight: 700; letter-spacing: -.015em; }
+.onboarding-steps p { max-width: 320px; margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+.preview-trust { display: flex; align-items: center; gap: 12px; color: #327a57; }
+.preview-trust svg { flex: none; }
+.preview-trust span { display: flex; flex-direction: column; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.preview-trust strong { color: var(--ink); font-size: 10px; }
 .login-footer { min-height: 80px; border-top: 1px solid var(--line); color: var(--faint); font-size: 9px; font-weight: 600; letter-spacing: .04em; }
 .pairing-main { display: grid; min-height: calc(100svh - 160px); place-items: center; padding: 40px 20px; }
 .pairing-card { width: min(100%,620px); border: 1px solid var(--line); background: var(--surface); padding: clamp(32px,6vw,64px); }

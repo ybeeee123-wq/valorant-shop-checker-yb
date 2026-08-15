@@ -56,6 +56,10 @@ export function ChevronRightIcon(props: IconProps) {
   return <svg {...baseProps} {...props}><path d="m9 18 6-6-6-6" /></svg>;
 }
 
+export function DownloadIcon(props: IconProps) {
+  return <svg {...baseProps} {...props}><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>;
+}
+
 export function AlertIcon(props: IconProps) {
   return <svg {...baseProps} {...props}><path d="M10.3 3.8 2.2 18a2 2 0 0 0 1.7 3h16.2a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg>;
 }

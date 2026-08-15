@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api/client';
-import { ChevronRightIcon, ShieldIcon } from '../components/Icons';
+import { ChevronRightIcon, DownloadIcon, ShieldIcon } from '../components/Icons';
 import ThemeToggle from '../components/ThemeToggle';
 import Brand from '../components/Brand';
 
 type Stage = 'start' | 'paste';
+
+const INSTALLER_URL = import.meta.env.VITE_INSTALLER_URL
+  ?? 'https://github.com/ybeeee123-wq/valorant-shop-checker-yb/releases/latest/download/VALSHOP-Setup.exe';
 
 export default function LoginPage() {
   const { state, dispatch } = useAuth();
@@ -76,9 +79,9 @@ export default function LoginPage() {
 
       <main className="login-main">
         <section className="login-panel">
-          <p className="login-eyebrow">Your daily store, simplified.</p>
-          <h1>Check your shop.<br />Skip the launch.</h1>
-          <p className="login-intro">Your daily VALORANT offers, featured collections, and balances in one quiet place.</p>
+          <p className="login-eyebrow">The VALORANT shop companion</p>
+          <h1>Your shop.<br />Always within reach.</h1>
+          <p className="login-intro">See your daily offers, Night Market, bundles, wishlist, and balance from any browser. Connect Riot once to get started.</p>
 
           {stage === 'start' ? (
             <div className="login-action-block">
@@ -87,6 +90,11 @@ export default function LoginPage() {
                 <span>Sign in with Riot</span>
                 {!loading && <ChevronRightIcon className="h-4 w-4" />}
               </button>
+              <a className="installer-button" href={INSTALLER_URL}>
+                <DownloadIcon className="h-4 w-4" />
+                <span><strong>Install for Windows</strong><small>Background checks and native alerts</small></span>
+                <span className="installer-meta">Windows 10/11</span>
+              </a>
               <div className="security-note">
                 <ShieldIcon className="h-[18px] w-[18px]" />
                 <p><strong>Private by design.</strong> Authentication happens on Riot’s official page. VALSHOP never sees your password.</p>
@@ -112,16 +120,14 @@ export default function LoginPage() {
           )}
         </section>
 
-        <aside className="login-preview" aria-label="VALSHOP features">
-          <div className="preview-topline"><span>Today’s overview</span><span>Live</span></div>
-          <div className="preview-stat"><strong>04</strong><span>Personal<br />offers</span></div>
-          <div className="preview-rule" />
-          <ul>
-            <li><span>Daily shop</span><i>Ready</i></li>
-            <li><span>Featured bundles</span><i>Live</i></li>
-            <li><span>Wallet balances</span><i>Synced</i></li>
-          </ul>
-          <p>Everything you need to check.<br />Nothing you don’t.</p>
+        <aside className="login-preview" aria-label="How to start using VALSHOP">
+          <div className="preview-topline"><span>Get started</span><span>About 2 minutes</span></div>
+          <ol className="onboarding-steps">
+            <li><i>01</i><div><strong>Sign in through Riot</strong><p>Use Riot’s official login page. Your password never passes through VALSHOP.</p></div></li>
+            <li><i>02</i><div><strong>Open your shop anywhere</strong><p>Your daily offers, bundles, wishlist, and Night Market live on this website.</p></div></li>
+            <li><i>03</i><div><strong>Install the companion</strong><p>Optional, but recommended for automatic checks and Windows notifications.</p></div></li>
+          </ol>
+          <div className="preview-trust"><ShieldIcon className="h-5 w-5" /><span><strong>Built for privacy</strong>Independent, password-free Riot connection.</span></div>
         </aside>
       </main>
 

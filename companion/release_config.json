@@ -2,5 +2,5 @@
     "api_base_url":  "https://valorant-shop-checker-yb-production.up.railway.app",
     "public_site_url":  "https://ybvalshop.netlify.app",
     "update_metadata_url":  "",
-    "update_download_url":  ""
+    "update_download_url":  "https://github.com/ybeeee123-wq/valorant-shop-checker-yb/releases/latest/download/VALSHOP-Setup.exe"
 }

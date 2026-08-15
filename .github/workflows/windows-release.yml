@@ -1,5 +1,8 @@
 name: Validate and build VALSHOP
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [master, main]
@@ -33,3 +36,9 @@ jobs:
           path: |
             dist/VALSHOP/**
             release/VALSHOP-Setup.exe
+      - name: Publish tagged installer
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release/VALSHOP-Setup.exe
